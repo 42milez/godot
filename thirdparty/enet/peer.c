@@ -620,6 +620,9 @@ enet_peer_setup_outgoing_command (ENetPeer * peer, ENetOutgoingCommand * outgoin
     
     peer -> outgoingDataTotal += enet_protocol_command_size (outgoingCommand -> command.header.command) + outgoingCommand -> fragmentLength;
 
+    // チャネル数が最大の場合
+    // enet_host_connectのタイミングではchannelIDが0xFFだが、sizeof(channels) < 0xFFでも、
+    // この条件があるので領域外アクセスは起こらない
     if (outgoingCommand -> command.header.channelID == 0xFF)
     {
        ++ peer -> outgoingReliableSequenceNumber;
