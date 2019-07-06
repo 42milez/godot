@@ -263,7 +263,7 @@ void TileSetEditor::_notification(int p_what) {
 TileSetEditor::TileSetEditor(EditorNode *p_editor) {
 
 	editor = p_editor;
-	undo_redo = editor->get_undo_redo();
+	undo_redo = EditorNode::get_undo_redo();
 	current_tile = -1;
 
 	VBoxContainer *left_container = memnew(VBoxContainer);
@@ -829,8 +829,8 @@ void TileSetEditor::_on_workspace_draw() {
 			case EDITMODE_BITMASK: {
 				Color c(1, 0, 0, 0.5);
 				Color ci(0.3, 0.6, 1, 0.5);
-				for (float x = 0; x < region.size.x / (spacing + size.x); x++) {
-					for (float y = 0; y < region.size.y / (spacing + size.y); y++) {
+				for (int x = 0; x < region.size.x / (spacing + size.x); x++) {
+					for (int y = 0; y < region.size.y / (spacing + size.y); y++) {
 						Vector2 coord(x, y);
 						Point2 anchor(coord.x * (spacing + size.x), coord.y * (spacing + size.y));
 						anchor += WORKSPACE_MARGIN;
@@ -974,6 +974,7 @@ void TileSetEditor::_on_workspace_draw() {
 			workspace->draw_rect(region, c, false);
 		}
 	}
+	delete tiles;
 
 	if (edit_mode == EDITMODE_REGION) {
 		if (workspace_mode != WORKSPACE_EDIT) {
@@ -1068,6 +1069,7 @@ void TileSetEditor::_on_workspace_overlay_draw() {
 			c = Color(0.1, 0.1, 0.1);
 			workspace_overlay->draw_string(font, region.position, tile_id_name, c);
 		}
+		delete tiles;
 	}
 
 	int t_id = get_current_tile();
@@ -1115,10 +1117,12 @@ void TileSetEditor::_on_workspace_input(const Ref<InputEvent> &p_ie) {
 							set_current_tile(t_id);
 							workspace->update();
 							workspace_overlay->update();
+							delete tiles;
 							return;
 						}
 					}
 				}
+				delete tiles;
 			}
 		}
 
@@ -2009,11 +2013,7 @@ bool TileSetEditor::_sort_tiles(Variant p_a, Variant p_b) {
 		return true;
 
 	} else if (pos_a.y == pos_b.y) {
-		if (pos_a.x < pos_b.x) {
-			return true;
-		} else {
-			return false;
-		}
+		return (pos_a.x < pos_b.x);
 	} else {
 		return false;
 	}
@@ -3122,6 +3122,7 @@ void TileSetEditor::update_workspace_minsize() {
 				workspace_min_size.y = region.position.y + region.size.y;
 		}
 	}
+	delete tiles;
 
 	workspace->set_custom_minimum_size(workspace_min_size + WORKSPACE_MARGIN * 2);
 	workspace_container->set_custom_minimum_size(workspace_min_size + WORKSPACE_MARGIN * 2);

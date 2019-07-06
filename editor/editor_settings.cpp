@@ -107,7 +107,7 @@ bool EditorSettings::_set_only(const StringName &p_name, const Variant &p_value)
 		}
 
 		if (save_changed_setting) {
-			if (props[p_name].save != true) {
+			if (!props[p_name].save) {
 				props[p_name].save = true;
 				changed = true;
 			}
@@ -573,6 +573,7 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 	_initial_set("editors/2d/bone_outline_color", Color(0.35, 0.35, 0.35));
 	_initial_set("editors/2d/bone_outline_size", 2);
 	_initial_set("editors/2d/viewport_border_color", Color(0.4, 0.4, 1.0, 0.4));
+	_initial_set("editors/2d/constrain_editor_view", true);
 	_initial_set("editors/2d/warped_mouse_panning", true);
 	_initial_set("editors/2d/simple_panning", false);
 	_initial_set("editors/2d/scroll_to_pan", false);
@@ -691,7 +692,7 @@ bool EditorSettings::_save_text_editor_theme(String p_file) {
 	keys.sort();
 
 	for (const List<String>::Element *E = keys.front(); E; E = E->next()) {
-		String key = E->get();
+		const String &key = E->get();
 		if (key.begins_with("text_editor/highlighting/") && key.find("color") >= 0) {
 			cf->set_value(theme_section, key.replace("text_editor/highlighting/", ""), ((Color)props[key].variant).to_html());
 		}
@@ -699,10 +700,7 @@ bool EditorSettings::_save_text_editor_theme(String p_file) {
 
 	Error err = cf->save(p_file);
 
-	if (err == OK) {
-		return true;
-	}
-	return false;
+	return err == OK;
 }
 
 bool EditorSettings::_is_default_text_editor_theme(String p_theme_name) {
@@ -940,7 +938,7 @@ fail:
 		Vector<String> list = extra_config->get_value("init_projects", "list");
 		for (int i = 0; i < list.size(); i++) {
 
-			list.write[i] = exe_path + "/" + list[i];
+			list.write[i] = exe_path.plus_file(list[i]);
 		};
 		extra_config->set_value("init_projects", "list", list);
 	};
@@ -1475,6 +1473,10 @@ void EditorSettings::get_shortcut_list(List<String> *r_shortcuts) {
 
 Ref<ShortCut> ED_GET_SHORTCUT(const String &p_path) {
 
+	if (!EditorSettings::get_singleton()) {
+		return NULL;
+	}
+
 	Ref<ShortCut> sc = EditorSettings::get_singleton()->get_shortcut(p_path);
 	if (!sc.is_valid()) {
 		ERR_EXPLAIN("Used ED_GET_SHORTCUT with invalid shortcut: " + p_path);
@@ -1508,6 +1510,15 @@ Ref<ShortCut> ED_SHORTCUT(const String &p_path, const String &p_name, uint32_t p
 		ie->set_alt(bool(p_keycode & KEY_MASK_ALT));
 		ie->set_control(bool(p_keycode & KEY_MASK_CTRL));
 		ie->set_metakey(bool(p_keycode & KEY_MASK_META));
+	}
+
+	if (!EditorSettings::get_singleton()) {
+		Ref<ShortCut> sc;
+		sc.instance();
+		sc->set_name(p_name);
+		sc->set_shortcut(ie);
+		sc->set_meta("original", ie);
+		return sc;
 	}
 
 	Ref<ShortCut> sc = EditorSettings::get_singleton()->get_shortcut(p_path);
@@ -1568,6 +1579,8 @@ void EditorSettings::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_recent_dirs"), &EditorSettings::get_recent_dirs);
 
 	ADD_SIGNAL(MethodInfo("settings_changed"));
+
+	BIND_CONSTANT(NOTIFICATION_EDITOR_SETTINGS_CHANGED);
 }
 
 EditorSettings::EditorSettings() {

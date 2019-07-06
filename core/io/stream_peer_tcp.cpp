@@ -217,6 +217,11 @@ Error StreamPeerTCP::read(uint8_t *p_buffer, int p_bytes, int &r_received, bool 
 
 			to_read -= read;
 			total_read += read;
+
+			if (!p_block) {
+				r_received = total_read;
+				return OK;
+			}
 		}
 	}
 
@@ -352,7 +357,6 @@ void StreamPeerTCP::_bind_methods() {
 StreamPeerTCP::StreamPeerTCP() :
 		_sock(Ref<NetSocket>(NetSocket::create())),
 		status(STATUS_NONE),
-		peer_host(IP_Address()),
 		peer_port(0) {
 }
 

@@ -166,6 +166,8 @@ bool FindReplaceBar::_search(uint32_t p_flags, int p_from_line, int p_from_col) 
 		result_line = -1;
 		result_col = -1;
 		text_edit->set_search_text("");
+		text_edit->set_search_flags(p_flags);
+		text_edit->set_current_search_result(line, col);
 		set_error(text.empty() ? "" : TTR("No Matches"));
 	}
 
@@ -339,7 +341,11 @@ bool FindReplaceBar::search_prev() {
 bool FindReplaceBar::search_next() {
 
 	uint32_t flags = 0;
-	String text = get_search_text();
+	String text;
+	if (replace_all_mode)
+		text = get_replace_text();
+	else
+		text = get_search_text();
 
 	if (is_whole_words())
 		flags |= TextEdit::SEARCH_WHOLE_WORDS;
@@ -722,7 +728,7 @@ void CodeTextEditor::_code_complete_timer_timeout() {
 
 void CodeTextEditor::_complete_request() {
 
-	List<String> entries;
+	List<ScriptCodeCompletionOption> entries;
 	String ctext = text_editor->get_text_for_completion();
 	_code_complete_script(ctext, &entries);
 	bool forced = false;
@@ -731,15 +737,55 @@ void CodeTextEditor::_complete_request() {
 	}
 	if (entries.size() == 0)
 		return;
-	Vector<String> strs;
-	strs.resize(entries.size());
-	int i = 0;
-	for (List<String>::Element *E = entries.front(); E; E = E->next()) {
 
-		strs.write[i++] = E->get();
+	for (List<ScriptCodeCompletionOption>::Element *E = entries.front(); E; E = E->next()) {
+		E->get().icon = _get_completion_icon(E->get());
 	}
+	text_editor->code_complete(entries, forced);
+}
 
-	text_editor->code_complete(strs, forced);
+Ref<Texture> CodeTextEditor::_get_completion_icon(const ScriptCodeCompletionOption &p_option) {
+	Ref<Texture> tex;
+	switch (p_option.kind) {
+		case ScriptCodeCompletionOption::KIND_CLASS: {
+			if (has_icon(p_option.display, "EditorIcons")) {
+				tex = get_icon(p_option.display, "EditorIcons");
+			} else {
+				tex = get_icon("Object", "EditorIcons");
+			}
+		} break;
+		case ScriptCodeCompletionOption::KIND_ENUM:
+			tex = get_icon("Enum", "EditorIcons");
+			break;
+		case ScriptCodeCompletionOption::KIND_FILE_PATH:
+			tex = get_icon("File", "EditorIcons");
+			break;
+		case ScriptCodeCompletionOption::KIND_NODE_PATH:
+			tex = get_icon("NodePath", "EditorIcons");
+			break;
+		case ScriptCodeCompletionOption::KIND_VARIABLE:
+			tex = get_icon("Variant", "EditorIcons");
+			break;
+		case ScriptCodeCompletionOption::KIND_CONSTANT:
+			tex = get_icon("MemberConstant", "EditorIcons");
+			break;
+		case ScriptCodeCompletionOption::KIND_MEMBER:
+			tex = get_icon("MemberProperty", "EditorIcons");
+			break;
+		case ScriptCodeCompletionOption::KIND_SIGNAL:
+			tex = get_icon("MemberSignal", "EditorIcons");
+			break;
+		case ScriptCodeCompletionOption::KIND_FUNCTION:
+			tex = get_icon("MemberMethod", "EditorIcons");
+			break;
+		case ScriptCodeCompletionOption::KIND_PLAIN_TEXT:
+			tex = get_icon("CubeMesh", "EditorIcons");
+			break;
+		default:
+			tex = get_icon("String", "EditorIcons");
+			break;
+	}
+	return tex;
 }
 
 void CodeTextEditor::_font_resize_timeout() {
@@ -1215,6 +1261,11 @@ void CodeTextEditor::goto_line_selection(int p_line, int p_begin, int p_end) {
 	text_editor->call_deferred("cursor_set_line", p_line);
 	text_editor->call_deferred("cursor_set_column", p_begin);
 	text_editor->select(p_line, p_begin, p_line, p_end);
+}
+
+void CodeTextEditor::goto_line_centered(int p_line) {
+	goto_line(p_line);
+	text_editor->call_deferred("center_viewport_to_cursor");
 }
 
 void CodeTextEditor::set_executing_line(int p_line) {

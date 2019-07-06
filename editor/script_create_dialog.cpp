@@ -286,8 +286,8 @@ void ScriptCreateDialog::_create_new() {
 		}
 	}
 
-	hide();
 	emit_signal("script_created", scr);
+	hide();
 }
 
 void ScriptCreateDialog::_load_exist() {
@@ -300,8 +300,8 @@ void ScriptCreateDialog::_load_exist() {
 		return;
 	}
 
-	hide();
 	emit_signal("script_created", p_script.get_ref_ptr());
+	hide();
 }
 
 void ScriptCreateDialog::_lang_changed(int l) {
@@ -742,8 +742,8 @@ ScriptCreateDialog::ScriptCreateDialog() {
 
 	/* Built-in Script */
 
-	internal = memnew(CheckButton);
-	internal->set_h_size_flags(0);
+	internal = memnew(CheckBox);
+	internal->set_text(TTR("On"));
 	internal->connect("pressed", this, "_built_in_pressed");
 	internal_label = memnew(Label(TTR("Built-in Script")));
 	internal_label->set_align(Label::ALIGN_RIGHT);

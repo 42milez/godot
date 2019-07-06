@@ -599,6 +599,10 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 
 			auto_build_solutions = true;
 			editor = true;
+		} else if (I->get() == "--export" || I->get() == "--export-debug") { // Export project
+
+			editor = true;
+			main_args.push_back(I->get());
 #endif
 		} else if (I->get() == "--path") { // set path of project to start or edit
 
@@ -812,7 +816,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 			int sp = bp.find_last(":");
 			if (sp == -1) {
 				ERR_EXPLAIN("Invalid breakpoint: '" + bp + "', expected file:line format.");
-				ERR_CONTINUE(sp == -1);
+				ERR_CONTINUE(true);
 			}
 
 			script_debugger->insert_breakpoint(bp.substr(sp + 1, bp.length()).to_int(), bp.substr(0, sp));
@@ -1343,20 +1347,10 @@ bool Main::start() {
 					removal_docs.push_back(args[j]);
 			} else if (args[i] == "--export") {
 				editor = true; //needs editor
-				if (i + 1 < args.size()) {
-					_export_preset = args[i + 1];
-				} else {
-					ERR_PRINT("Export preset name not specified");
-					return false;
-				}
+				_export_preset = args[i + 1];
 			} else if (args[i] == "--export-debug") {
 				editor = true; //needs editor
-				if (i + 1 < args.size()) {
-					_export_preset = args[i + 1];
-				} else {
-					ERR_PRINT("Export preset name not specified");
-					return false;
-				}
+				_export_preset = args[i + 1];
 				export_debug = true;
 #endif
 			} else {
@@ -1374,6 +1368,8 @@ bool Main::start() {
 	String main_loop_type;
 #ifdef TOOLS_ENABLED
 	if (doc_tool != "") {
+
+		Engine::get_singleton()->set_editor_hint(true); // Needed to instance editor-only classes for their default values
 
 		{
 			DirAccessRef da = DirAccess::open(doc_tool);
@@ -1469,7 +1465,7 @@ bool Main::start() {
 				if (obj)
 					memdelete(obj);
 				ERR_EXPLAIN("Can't load script '" + script + "', it does not inherit from a MainLoop type");
-				ERR_FAIL_COND_V(!script_loop, false);
+				ERR_FAIL_V(false);
 			}
 
 			script_loop->set_init_script(script_res);
@@ -1713,13 +1709,13 @@ bool Main::start() {
 
 						if (sep == -1) {
 							DirAccess *da = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
-							local_game_path = da->get_current_dir() + "/" + local_game_path;
+							local_game_path = da->get_current_dir().plus_file(local_game_path);
 							memdelete(da);
 						} else {
 
 							DirAccess *da = DirAccess::open(local_game_path.substr(0, sep));
 							if (da) {
-								local_game_path = da->get_current_dir() + "/" + local_game_path.substr(sep + 1, local_game_path.length());
+								local_game_path = da->get_current_dir().plus_file(local_game_path.substr(sep + 1, local_game_path.length()));
 								memdelete(da);
 							}
 						}

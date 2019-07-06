@@ -306,8 +306,11 @@ void ScriptEditor::_goto_script_line(REF p_script, int p_line) {
 			editor->push_item(p_script.ptr());
 
 			ScriptEditorBase *current = _get_current_editor();
-			if (current)
+			if (ScriptTextEditor *script_text_editor = Object::cast_to<ScriptTextEditor>(current)) {
+				script_text_editor->goto_line_centered(p_line);
+			} else if (current) {
 				current->goto_line(p_line, true);
+			}
 		}
 	}
 }
@@ -3460,7 +3463,7 @@ void ScriptEditorPlugin::get_window_layout(Ref<ConfigFile> p_layout) {
 
 void ScriptEditorPlugin::get_breakpoints(List<String> *p_breakpoints) {
 
-	return script_editor->get_breakpoints(p_breakpoints);
+	script_editor->get_breakpoints(p_breakpoints);
 }
 
 void ScriptEditorPlugin::edited_scene_changed() {

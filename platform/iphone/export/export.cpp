@@ -95,7 +95,7 @@ class EditorExportPlatformIOS : public EditorExportPlatform {
 	Vector<ExportArchitecture> _get_supported_architectures();
 	Vector<String> _get_preset_architectures(const Ref<EditorExportPreset> &p_preset);
 
-	void _add_assets_to_project(Vector<uint8_t> &p_project_data, const Vector<IOSExportAsset> &p_additional_assets);
+	void _add_assets_to_project(const Ref<EditorExportPreset> &p_preset, Vector<uint8_t> &p_project_data, const Vector<IOSExportAsset> &p_additional_assets);
 	Error _export_additional_assets(const String &p_out_dir, const Vector<String> &p_assets, bool p_is_framework, Vector<IOSExportAsset> &r_exported_assets);
 	Error _export_additional_assets(const String &p_out_dir, const Vector<SharedObject> &p_libraries, Vector<IOSExportAsset> &r_exported_assets);
 
@@ -125,7 +125,7 @@ class EditorExportPlatformIOS : public EditorExportPlatform {
 				first = true;
 				continue;
 			}
-			if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_')) {
+			if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-')) {
 				if (r_error) {
 					*r_error = vformat(TTR("The character '%s' is not allowed in Identifier."), String::chr(c));
 				}
@@ -137,7 +137,7 @@ class EditorExportPlatformIOS : public EditorExportPlatform {
 				}
 				return false;
 			}
-			if (first && c == '_') {
+			if (first && c == '-') {
 				if (r_error) {
 					*r_error = vformat(TTR("The character '%s' cannot be the first character in a Identifier segment."), String::chr(c));
 				}
@@ -564,7 +564,7 @@ Error EditorExportPlatformIOS::_walk_dir_recursive(DirAccess *p_da, FileHandler 
 				dirs.push_back(path);
 			}
 		} else {
-			Error err = p_handler(current_dir + "/" + path, p_userdata);
+			Error err = p_handler(current_dir.plus_file(path), p_userdata);
 			if (err) {
 				p_da->list_dir_end();
 				return err;
@@ -656,7 +656,7 @@ struct ExportLibsData {
 	String dest_dir;
 };
 
-void EditorExportPlatformIOS::_add_assets_to_project(Vector<uint8_t> &p_project_data, const Vector<IOSExportAsset> &p_additional_assets) {
+void EditorExportPlatformIOS::_add_assets_to_project(const Ref<EditorExportPreset> &p_preset, Vector<uint8_t> &p_project_data, const Vector<IOSExportAsset> &p_additional_assets) {
 	Vector<Ref<EditorExportPlugin> > export_plugins = EditorExport::get_singleton()->get_export_plugins();
 	Vector<String> frameworks;
 	for (int i = 0; i < export_plugins.size(); ++i) {
@@ -714,7 +714,28 @@ void EditorExportPlatformIOS::_add_assets_to_project(Vector<uint8_t> &p_project_
 
 	// Note, frameworks like gamekit are always included in our project.pbxprof file
 	// even if turned off in capabilities.
-	// Frameworks that are used by modules (like arkit) we may need to optionally add here.
+
+	// We do need our ARKit framework
+	if ((bool)p_preset->get("capabilities/arkit")) {
+		String build_id = (++current_id).str();
+		String ref_id = (++current_id).str();
+
+		if (pbx_frameworks_build.length() > 0) {
+			pbx_frameworks_build += ",\n";
+			pbx_frameworks_refs += ",\n";
+		}
+
+		pbx_frameworks_build += build_id;
+		pbx_frameworks_refs += ref_id;
+
+		Dictionary format_dict;
+		format_dict["build_id"] = build_id;
+		format_dict["ref_id"] = ref_id;
+		format_dict["name"] = "ARKit.framework";
+		format_dict["file_path"] = "System/Library/Frameworks/ARKit.framework";
+		format_dict["file_type"] = "wrapper.framework";
+		pbx_files += file_info_format.format(format_dict, "$_");
+	}
 
 	String str = String::utf8((const char *)p_project_data.ptr(), p_project_data.size());
 	str = str.replace("$additional_pbx_files", pbx_files);
@@ -763,7 +784,7 @@ Error EditorExportPlatformIOS::_export_additional_assets(const String &p_out_dir
 				}
 			}
 
-			String destination = destination_dir + "/" + asset.get_file();
+			String destination = destination_dir.plus_file(asset.get_file());
 			Error err = dir_exists ? da->copy_dir(asset, destination) : da->copy(asset, destination);
 			memdelete(da);
 			if (err) {
@@ -1045,7 +1066,7 @@ Error EditorExportPlatformIOS::export_project(const Ref<EditorExportPreset> &p_p
 	print_line("Exporting additional assets");
 	Vector<IOSExportAsset> assets;
 	_export_additional_assets(dest_dir + binary_name, libraries, assets);
-	_add_assets_to_project(project_file_data, assets);
+	_add_assets_to_project(p_preset, project_file_data, assets);
 	String project_file_name = dest_dir + binary_name + ".xcodeproj/project.pbxproj";
 	FileAccess *f = FileAccess::open(project_file_name, FileAccess::WRITE);
 	if (!f) {

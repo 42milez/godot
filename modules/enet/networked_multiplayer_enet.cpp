@@ -852,7 +852,9 @@ NetworkedMultiplayerENet::NetworkedMultiplayerENet() {
 
 NetworkedMultiplayerENet::~NetworkedMultiplayerENet() {
 
-	close_connection();
+	if (active) {
+		close_connection();
+	}
 }
 
 // Sets IP for ENet to bind when using create_server or create_client

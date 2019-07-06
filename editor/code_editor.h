@@ -131,7 +131,7 @@ public:
 	FindReplaceBar();
 };
 
-typedef void (*CodeTextEditorCodeCompleteFunc)(void *p_ud, const String &p_code, List<String> *r_options, bool &r_forced);
+typedef void (*CodeTextEditorCodeCompleteFunc)(void *p_ud, const String &p_code, List<ScriptCodeCompletionOption> *r_options, bool &r_forced);
 
 class CodeTextEditor : public VBoxContainer {
 
@@ -162,6 +162,7 @@ class CodeTextEditor : public VBoxContainer {
 
 	void _update_font();
 	void _complete_request();
+	Ref<Texture> _get_completion_icon(const ScriptCodeCompletionOption &p_option);
 	void _font_resize_timeout();
 	bool _add_font_size(int p_delta);
 
@@ -183,7 +184,7 @@ class CodeTextEditor : public VBoxContainer {
 protected:
 	virtual void _load_theme_settings() {}
 	virtual void _validate_script() {}
-	virtual void _code_complete_script(const String &p_code, List<String> *r_options) {}
+	virtual void _code_complete_script(const String &p_code, List<ScriptCodeCompletionOption> *r_options) {}
 
 	void _text_changed_idle_timeout();
 	void _code_complete_timer_timeout();
@@ -219,6 +220,7 @@ public:
 
 	void goto_line(int p_line);
 	void goto_line_selection(int p_line, int p_begin, int p_end);
+	void goto_line_centered(int p_line);
 	void set_executing_line(int p_line);
 	void clear_executing_line();
 

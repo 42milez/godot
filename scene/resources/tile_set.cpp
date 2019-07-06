@@ -721,7 +721,7 @@ void TileSet::tile_set_shape(int p_id, int p_shape_id, const Ref<Shape2D> &p_sha
 	ERR_FAIL_COND(!tile_map.has(p_id));
 	ERR_FAIL_COND(p_shape_id < 0);
 
-	if (tile_map[p_id].shapes_data.size() <= p_shape_id)
+	if (p_shape_id >= tile_map[p_id].shapes_data.size())
 		tile_map[p_id].shapes_data.resize(p_shape_id + 1);
 	tile_map[p_id].shapes_data.write[p_shape_id].shape = p_shape;
 	_decompose_convex_shape(p_shape);
@@ -731,17 +731,20 @@ void TileSet::tile_set_shape(int p_id, int p_shape_id, const Ref<Shape2D> &p_sha
 Ref<Shape2D> TileSet::tile_get_shape(int p_id, int p_shape_id) const {
 
 	ERR_FAIL_COND_V(!tile_map.has(p_id), Ref<Shape2D>());
-	ERR_FAIL_INDEX_V(p_shape_id, tile_map[p_id].shapes_data.size(), Ref<Shape2D>());
+	ERR_FAIL_COND_V(p_shape_id < 0, Ref<Shape2D>());
 
-	return tile_map[p_id].shapes_data[p_shape_id].shape;
+	if (p_shape_id < tile_map[p_id].shapes_data.size())
+		return tile_map[p_id].shapes_data[p_shape_id].shape;
+
+	return Ref<Shape2D>();
 }
 
 void TileSet::tile_set_shape_transform(int p_id, int p_shape_id, const Transform2D &p_offset) {
 
 	ERR_FAIL_COND(!tile_map.has(p_id));
-	ERR_FAIL_INDEX(p_shape_id, tile_map[p_id].shapes_data.size());
+	ERR_FAIL_COND(p_shape_id < 0);
 
-	if (tile_map[p_id].shapes_data.size() <= p_shape_id)
+	if (p_shape_id >= tile_map[p_id].shapes_data.size())
 		tile_map[p_id].shapes_data.resize(p_shape_id + 1);
 	tile_map[p_id].shapes_data.write[p_shape_id].shape_transform = p_offset;
 	emit_changed();
@@ -750,9 +753,12 @@ void TileSet::tile_set_shape_transform(int p_id, int p_shape_id, const Transform
 Transform2D TileSet::tile_get_shape_transform(int p_id, int p_shape_id) const {
 
 	ERR_FAIL_COND_V(!tile_map.has(p_id), Transform2D());
-	ERR_FAIL_INDEX_V(p_shape_id, tile_map[p_id].shapes_data.size(), Transform2D());
+	ERR_FAIL_COND_V(p_shape_id < 0, Transform2D());
 
-	return tile_map[p_id].shapes_data[p_shape_id].shape_transform;
+	if (p_shape_id < tile_map[p_id].shapes_data.size())
+		return tile_map[p_id].shapes_data[p_shape_id].shape_transform;
+
+	return Transform2D();
 }
 
 void TileSet::tile_set_shape_offset(int p_id, int p_shape_id, const Vector2 &p_offset) {
@@ -770,7 +776,7 @@ void TileSet::tile_set_shape_one_way(int p_id, int p_shape_id, const bool p_one_
 	ERR_FAIL_COND(!tile_map.has(p_id));
 	ERR_FAIL_COND(p_shape_id < 0);
 
-	if (tile_map[p_id].shapes_data.size() <= p_shape_id)
+	if (p_shape_id >= tile_map[p_id].shapes_data.size())
 		tile_map[p_id].shapes_data.resize(p_shape_id + 1);
 	tile_map[p_id].shapes_data.write[p_shape_id].one_way_collision = p_one_way;
 	emit_changed();
@@ -779,9 +785,12 @@ void TileSet::tile_set_shape_one_way(int p_id, int p_shape_id, const bool p_one_
 bool TileSet::tile_get_shape_one_way(int p_id, int p_shape_id) const {
 
 	ERR_FAIL_COND_V(!tile_map.has(p_id), false);
-	ERR_FAIL_INDEX_V(p_shape_id, tile_map[p_id].shapes_data.size(), false);
+	ERR_FAIL_COND_V(p_shape_id < 0, false);
 
-	return tile_map[p_id].shapes_data[p_shape_id].one_way_collision;
+	if (p_shape_id < tile_map[p_id].shapes_data.size())
+		return tile_map[p_id].shapes_data[p_shape_id].one_way_collision;
+
+	return false;
 }
 
 void TileSet::tile_set_shape_one_way_margin(int p_id, int p_shape_id, float p_margin) {
@@ -789,7 +798,7 @@ void TileSet::tile_set_shape_one_way_margin(int p_id, int p_shape_id, float p_ma
 	ERR_FAIL_COND(!tile_map.has(p_id));
 	ERR_FAIL_COND(p_shape_id < 0);
 
-	if (tile_map[p_id].shapes_data.size() <= p_shape_id)
+	if (p_shape_id >= tile_map[p_id].shapes_data.size())
 		tile_map[p_id].shapes_data.resize(p_shape_id + 1);
 	tile_map[p_id].shapes_data.write[p_shape_id].one_way_collision_margin = p_margin;
 	emit_changed();
@@ -798,9 +807,12 @@ void TileSet::tile_set_shape_one_way_margin(int p_id, int p_shape_id, float p_ma
 float TileSet::tile_get_shape_one_way_margin(int p_id, int p_shape_id) const {
 
 	ERR_FAIL_COND_V(!tile_map.has(p_id), 0);
-	ERR_FAIL_INDEX_V(p_shape_id, tile_map[p_id].shapes_data.size(), 0.0);
+	ERR_FAIL_COND_V(p_shape_id < 0, 0);
 
-	return tile_map[p_id].shapes_data[p_shape_id].one_way_collision_margin;
+	if (p_shape_id < tile_map[p_id].shapes_data.size())
+		return tile_map[p_id].shapes_data[p_shape_id].one_way_collision_margin;
+
+	return 0;
 }
 
 void TileSet::tile_set_light_occluder(int p_id, const Ref<OccluderPolygon2D> &p_light_occluder) {
