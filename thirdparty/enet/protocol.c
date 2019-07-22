@@ -1556,6 +1556,12 @@ enet_protocol_send_reliable_outgoing_commands (ENetHost * host, ENetPeer * peer)
 
        outgoingCommand -> sentTime = host -> serviceTime;
 
+       // [重要]
+       //
+       // コマンドに付随するデータは「断片化する」可能性があるため、コマンドのバッファーと送信データのバッファーを分ける必要がある。
+       // 要は「完全なデータ」は送信が完了するまでコマンドバッファーに保持される。
+       // 送信処理は「コマンドバッファーから細切れに取り出す」ことで行われる。
+       
        buffer -> data = command;
        buffer -> dataLength = commandSize;
 
