@@ -1202,7 +1202,9 @@ enet_protocol_receive_incoming_commands (ENetHost * host, ENetEvent * event)
        int receivedLength;
        ENetBuffer buffer;
 
-       // packetDataの先頭ポインタを渡しているので、受信したデータは host -> packetData で参照できるようになる
+       // - packetDataの先頭ポインタを渡しているので、受信したデータは host -> packetData で参照できるようになる
+       // - buffer.data と host -> receivedData は、ともに host -> packetData [0] を参照する
+
        buffer.data = host -> packetData [0];
        buffer.dataLength = sizeof (host -> packetData [0]);
 
