@@ -1025,9 +1025,9 @@ enet_protocol_handle_incoming_commands (ENetHost * host, ENetEvent * event)
           return 0;
 
         originalSize = host -> compressor.decompress (host -> compressor.context,
-                                    host -> receivedData + headerSize, 
+                                    host -> receivedData + headerSize,            // in 
                                     host -> receivedDataLength - headerSize, 
-                                    host -> packetData [1] + headerSize, 
+                                    host -> packetData [1] + headerSize,          // out 
                                     sizeof (host -> packetData [1]) - headerSize);
         if (originalSize <= 0 || originalSize > sizeof (host -> packetData [1]) - headerSize)
           return 0;
@@ -1697,9 +1697,10 @@ enet_protocol_send_outgoing_commands (ENetHost * host, ENetEvent * event, int ch
         {
             size_t originalSize = host -> packetSize - sizeof(ENetProtocolHeader),
                    compressedSize = host -> compressor.compress (host -> compressor.context,
-                                        & host -> buffers [1], host -> bufferCount - 1,
+                                        & host -> buffers [1],   // in
+                                        host -> bufferCount - 1,
                                         originalSize,
-                                        host -> packetData [1],
+                                        host -> packetData [1],  // out
 					originalSize);
             if (compressedSize > 0 && compressedSize < originalSize)
             {
