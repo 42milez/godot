@@ -795,23 +795,30 @@ enet_peer_dispatch_incoming_reliable_commands (ENetPeer * peer, ENetChannel * ch
     {
        ENetIncomingCommand * incomingCommand = (ENetIncomingCommand *) currentCommand;
          
-       if (incomingCommand -> fragmentsRemaining > 0 ||
-           incomingCommand -> reliableSequenceNumber != (enet_uint16) (channel -> incomingReliableSequenceNumber + 1))
+       // 断片化されたセグメントが存在している、もしくは、
+       // チャンネルのシーケンス番号に+1した値とコマンドのシーケンス番号が等しくない（新しいコマンドではない）
+       if (incomingCommand -> fragmentsRemaining > 0 || incomingCommand -> reliableSequenceNumber != (enet_uint16) (channel -> incomingReliableSequenceNumber + 1))
          break;
 
+       // 新しいコマンドを受信したらシーケンス番号を更新
        channel -> incomingReliableSequenceNumber = incomingCommand -> reliableSequenceNumber;
 
+       // fragmentCount は enet_peer_send() でセットされる
+       // 残りのセグメント数（断片化数）をチャンネルのシーケンス番号に加算する
        if (incomingCommand -> fragmentCount > 0)
          channel -> incomingReliableSequenceNumber += incomingCommand -> fragmentCount - 1;
     } 
 
+    // 新しいコマンドがない場合はディスパッチしない
     if (currentCommand == enet_list_begin (& channel -> incomingReliableCommands))
       return;
 
     channel -> incomingUnreliableSequenceNumber = 0;
 
+    // 新しいコマンドのポインタをコピーする（関数名には move とあるが、実体の移動ではなく、あくまでもポインタのコピー）
     enet_list_move (enet_list_end (& peer -> dispatchedCommands), enet_list_begin (& channel -> incomingReliableCommands), enet_list_previous (currentCommand));
 
+    // コマンドをディスパッチしてもらう
     if (! peer -> needsDispatch)
     {
        enet_list_insert (enet_list_end (& peer -> host -> dispatchQueue), & peer -> dispatchList);
@@ -819,6 +826,7 @@ enet_peer_dispatch_incoming_reliable_commands (ENetPeer * peer, ENetChannel * ch
        peer -> needsDispatch = 1;
     }
 
+    // Reliable Command をディスパッチする（なぜここで？）
     if (! enet_list_empty (& channel -> incomingUnreliableCommands))
        enet_peer_dispatch_incoming_unreliable_commands (peer, channel);
 }
