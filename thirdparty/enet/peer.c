@@ -108,15 +108,18 @@ enet_peer_send (ENetPeer * peer, enet_uint8 channelID, ENetPacket * packet)
        packet -> dataLength > peer -> host -> maximumPacketSize)
      return -1;
 
+   // MTU からセグメントヘッダとコマンドヘッダのサイズを減ずる
    fragmentLength = peer -> mtu - sizeof (ENetProtocolHeader) - sizeof (ENetProtocolSendFragment);
+
+   // チェックサムがあれば、その分フラグメント長を短くする
    if (peer -> host -> checksum != NULL)
      fragmentLength -= sizeof(enet_uint32);
 
    if (packet -> dataLength > fragmentLength)
    {
       enet_uint32 fragmentCount = (packet -> dataLength + fragmentLength - 1) / fragmentLength,
-             fragmentNumber,
-             fragmentOffset;
+                  fragmentNumber,
+                  fragmentOffset;
       enet_uint8 commandNumber;
       enet_uint16 startSequenceNumber; 
       ENetList fragments;
@@ -125,6 +128,7 @@ enet_peer_send (ENetPeer * peer, enet_uint8 channelID, ENetPacket * packet)
       if (fragmentCount > ENET_PROTOCOL_MAXIMUM_FRAGMENT_COUNT)
         return -1;
 
+      // Reliable と Unreliable が同時に指定されている場合は Reliable を優先する
       if ((packet -> flags & (ENET_PACKET_FLAG_RELIABLE | ENET_PACKET_FLAG_UNRELIABLE_FRAGMENT)) == ENET_PACKET_FLAG_UNRELIABLE_FRAGMENT &&
           channel -> outgoingUnreliableSequenceNumber < 0xFFFF)
       {
@@ -139,16 +143,15 @@ enet_peer_send (ENetPeer * peer, enet_uint8 channelID, ENetPacket * packet)
         
       enet_list_clear (& fragments);
 
-      for (fragmentNumber = 0,
-             fragmentOffset = 0;
-           fragmentOffset < packet -> dataLength;
-           ++ fragmentNumber,
-             fragmentOffset += fragmentLength)
+      for (fragmentNumber = 0, fragmentOffset = 0; fragmentOffset < packet -> dataLength; ++ fragmentNumber, fragmentOffset += fragmentLength)
       {
+         // データ長とオフセットの差分がフラグメント長よりも小さい場合は、差分をフラグメント長とする（ここを通るのはループ処理の最後）
          if (packet -> dataLength - fragmentOffset < fragmentLength)
            fragmentLength = packet -> dataLength - fragmentOffset;
 
          fragment = (ENetOutgoingCommand *) enet_malloc (sizeof (ENetOutgoingCommand));
+
+         // メモリ確保できなければ、処理済みのセグメント断片を破棄
          if (fragment == NULL)
          {
             while (! enet_list_empty (& fragments))
@@ -173,11 +176,13 @@ enet_peer_send (ENetPeer * peer, enet_uint8 channelID, ENetPacket * packet)
          fragment -> command.sendFragment.totalLength = ENET_HOST_TO_NET_32 (packet -> dataLength);
          fragment -> command.sendFragment.fragmentOffset = ENET_NET_TO_HOST_32 (fragmentOffset);
         
+         // 後で packet の referenceCount を増やすために、一旦 fragments にまとめている
          enet_list_insert (enet_list_end (& fragments), fragment);
       }
 
       packet -> referenceCount += fragmentNumber;
 
+      // C++ ならスマートポインタで参照カウントを増やせるので、ループ処理の中で直接 enet_peer_setup_outgoing_command() を呼べる
       while (! enet_list_empty (& fragments))
       {
          fragment = (ENetOutgoingCommand *) enet_list_remove (enet_list_begin (& fragments));

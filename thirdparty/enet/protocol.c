@@ -512,6 +512,8 @@ enet_protocol_handle_send_unreliable (ENetHost * host, ENetPeer * peer, const EN
     return 0;
 }
 
+/* フラグメンテーションを起こしたコマンドを１つずつ処理する（断片ごとに enet_protocol_handle_send_fragment() を呼ぶ）*/
+
 static int
 enet_protocol_handle_send_fragment (ENetHost * host, ENetPeer * peer, const ENetProtocol * command, enet_uint8 ** currentData)
 {
@@ -560,19 +562,24 @@ enet_protocol_handle_send_fragment (ENetHost * host, ENetPeer * peer, const ENet
         fragmentLength > totalLength - fragmentOffset)
       return -1;
 
+    /* シーケンス番号から断片の先頭を割り出し、断片化したデータを結合する */
+
     for (currentCommand = enet_list_previous (enet_list_end (& channel -> incomingReliableCommands));
          currentCommand != enet_list_end (& channel -> incomingReliableCommands);
          currentCommand = enet_list_previous (currentCommand))
     {
        ENetIncomingCommand * incomingCommand = (ENetIncomingCommand *) currentCommand;
 
+       // startSequenceNumber が incomingReliableSequenceNumber に等しい：先頭セグメントは受信済み
+       // startSequenceNumber が incomingReliableSequenceNumber より大きい：先頭セグメント未受信
        if (startSequenceNumber >= channel -> incomingReliableSequenceNumber)
        {
+          // 
           if (incomingCommand -> reliableSequenceNumber < channel -> incomingReliableSequenceNumber)
             continue;
        }
-       else
-       if (incomingCommand -> reliableSequenceNumber >= channel -> incomingReliableSequenceNumber)
+       else if (incomingCommand -> reliableSequenceNumber >= channel -> incomingReliableSequenceNumber)
+         // 処理中のコマンドは、先頭コマンド
          break;
 
        if (incomingCommand -> reliableSequenceNumber <= startSequenceNumber)
