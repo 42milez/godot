@@ -582,6 +582,7 @@ enet_protocol_handle_send_fragment (ENetHost * host, ENetPeer * peer, const ENet
          // 処理中のコマンドは、先頭コマンド
          break;
 
+       // reliableSequenceNumber が startSequenceNumber に等しければ、先頭セグメントとして扱う
        if (incomingCommand -> reliableSequenceNumber <= startSequenceNumber)
        {
           if (incomingCommand -> reliableSequenceNumber < startSequenceNumber)
@@ -597,6 +598,7 @@ enet_protocol_handle_send_fragment (ENetHost * host, ENetPeer * peer, const ENet
        }
     }
 
+    // 先頭セグメントをキューイングする？
     if (startCommand == NULL)
     {
        ENetProtocol hostCommand = * command;
