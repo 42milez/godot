@@ -610,6 +610,8 @@ enet_protocol_handle_send_fragment (ENetHost * host, ENetPeer * peer, const ENet
          return -1;
     }
 
+    // ENET_PROTOCOL_MAXIMUM_PACKET_COMMANDS (32) と関係あり？
+    // 断片化したデータが実際に保存されるのは「startCommand->packet->data」でfragmentsは断片の受信管理用に使われる。
     if ((startCommand -> fragments [fragmentNumber / 32] & (1 << (fragmentNumber % 32))) == 0)
     {
        -- startCommand -> fragmentsRemaining;
@@ -728,6 +730,7 @@ enet_protocol_handle_send_unreliable_fragment (ENetHost * host, ENetPeer * peer,
          return -1;
     }
 
+    // fragments は enet_uint32 * の配列
     if ((startCommand -> fragments [fragmentNumber / 32] & (1 << (fragmentNumber % 32))) == 0)
     {
        -- startCommand -> fragmentsRemaining;
