@@ -730,11 +730,15 @@ enet_protocol_handle_send_unreliable_fragment (ENetHost * host, ENetPeer * peer,
          return -1;
     }
 
-    // fragments は enet_uint32 * の配列
+    // fragmentCount = 10 なら fragments のサイズは 0 となる（fragments は enet_uint32 の配列なので、１要素で 32個まで断片を管理できる）
+    // fragmentNumber = 0 のとき、fragments のインデックスは 0 で、シフトは 0 ビットの左シフト
+    // なので、fragments[0] の 00000000 00000000 00000000 00000000 と 00000000 00000000 00000000 00000001 の論理演算となる
+    // 結果が 0 なら、その断片は初めて処理するものなので、データ領域にコピーする
     if ((startCommand -> fragments [fragmentNumber / 32] & (1 << (fragmentNumber % 32))) == 0)
     {
        -- startCommand -> fragmentsRemaining;
 
+       // 処理する断片に対応するフラグを立てる（fragments[0] の最下位ビット）
        startCommand -> fragments [fragmentNumber / 32] |= (1 << (fragmentNumber % 32));
 
        if (fragmentOffset + fragmentLength > startCommand -> packet -> dataLength)
@@ -1500,12 +1504,18 @@ enet_protocol_send_reliable_outgoing_commands (ENetHost * host, ENetPeer * peer)
        reliableWindow = outgoingCommand -> reliableSequenceNumber / ENET_PEER_RELIABLE_WINDOW_SIZE;
        if (channel != NULL)
        {
-           if (! windowWrap &&
-               outgoingCommand -> sendAttempts < 1 &&
-               ! (outgoingCommand -> reliableSequenceNumber % ENET_PEER_RELIABLE_WINDOW_SIZE) &&
+           if (! windowWrap &&                                                                   // フラグが立っていない
+               outgoingCommand -> sendAttempts < 1 &&                                            // 送信試行回数が1回未満
+               ! (outgoingCommand -> reliableSequenceNumber % ENET_PEER_RELIABLE_WINDOW_SIZE) && // シーケンス番号が4096未満でない　
+               // 該当するウィンドウ管理領域のサイズが4096以上（シーケンス番号からウィンドウを特定）
                (channel -> reliableWindows [(reliableWindow + ENET_PEER_RELIABLE_WINDOWS - 1) % ENET_PEER_RELIABLE_WINDOWS] >= ENET_PEER_RELIABLE_WINDOW_SIZE ||
-                 channel -> usedReliableWindows & ((((1 << ENET_PEER_FREE_RELIABLE_WINDOWS) - 1) << reliableWindow) |
-                   (((1 << ENET_PEER_FREE_RELIABLE_WINDOWS) - 1) >> (ENET_PEER_RELIABLE_WINDOWS - reliableWindow)))))
+                 // ウィンドウ管理フラグ？が既に使用されている
+                 channel -> usedReliableWindows & (
+                   (((1 << ENET_PEER_FREE_RELIABLE_WINDOWS) - 1) << reliableWindow) |
+                   (((1 << ENET_PEER_FREE_RELIABLE_WINDOWS) - 1) >> (ENET_PEER_RELIABLE_WINDOWS - reliableWindow))
+                 )
+               )
+           )
              windowWrap = 1;
           if (windowWrap)
           {

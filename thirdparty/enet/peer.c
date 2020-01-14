@@ -831,7 +831,7 @@ enet_peer_dispatch_incoming_reliable_commands (ENetPeer * peer, ENetChannel * ch
        peer -> needsDispatch = 1;
     }
 
-    // Reliable Command をディスパッチする（なぜここで？）
+    // Unreliable Command をディスパッチする（なぜここで？）
     if (! enet_list_empty (& channel -> incomingUnreliableCommands))
        enet_peer_dispatch_incoming_unreliable_commands (peer, channel);
 }
@@ -968,6 +968,7 @@ enet_peer_queue_incoming_command (ENetPeer * peer, const ENetProtocol * command,
     if (fragmentCount > 0)
     { 
        if (fragmentCount <= ENET_PROTOCOL_MAXIMUM_FRAGMENT_COUNT)
+         // 
          incomingCommand -> fragments = (enet_uint32 *) enet_malloc ((fragmentCount + 31) / 32 * sizeof (enet_uint32));
        if (incomingCommand -> fragments == NULL)
        {
