@@ -367,39 +367,43 @@ enet_protocol_handle_connect (ENetHost * host, ENetProtocolHeader * header, ENet
 
     peer -> mtu = mtu;
 
-    if (host -> outgoingBandwidth == 0 &&
-        peer -> incomingBandwidth == 0)
-      peer -> windowSize = ENET_PROTOCOL_MAXIMUM_WINDOW_SIZE;
-    else
-    if (host -> outgoingBandwidth == 0 ||
-        peer -> incomingBandwidth == 0)
-      peer -> windowSize = (ENET_MAX (host -> outgoingBandwidth, peer -> incomingBandwidth) /
-                                    ENET_PEER_WINDOW_SIZE_SCALE) *
-                                      ENET_PROTOCOL_MINIMUM_WINDOW_SIZE;
-    else
-      peer -> windowSize = (ENET_MIN (host -> outgoingBandwidth, peer -> incomingBandwidth) /
-                                    ENET_PEER_WINDOW_SIZE_SCALE) *
-                                      ENET_PROTOCOL_MINIMUM_WINDOW_SIZE;
+    // 帯域制限がなければウィンドウサイズを最大値に設定する
+    // 帯域が指定されている場合はウィンドウスケールと最小ウィンドウサイズからピアのウィンドウサイズを決定する
+    if (host -> outgoingBandwidth == 0 && peer -> incomingBandwidth == 0) {
+        peer -> windowSize = ENET_PROTOCOL_MAXIMUM_WINDOW_SIZE;
+    }
+    else if (host -> outgoingBandwidth == 0 || peer -> incomingBandwidth == 0) {
+        peer -> windowSize = (ENET_MAX (host -> outgoingBandwidth, peer -> incomingBandwidth) / ENET_PEER_WINDOW_SIZE_SCALE) * ENET_PROTOCOL_MINIMUM_WINDOW_SIZE;
+    }
+    else {
+        peer -> windowSize = (ENET_MIN (host -> outgoingBandwidth, peer -> incomingBandwidth) / ENET_PEER_WINDOW_SIZE_SCALE) * ENET_PROTOCOL_MINIMUM_WINDOW_SIZE;
+    }
 
-    if (peer -> windowSize < ENET_PROTOCOL_MINIMUM_WINDOW_SIZE)
-      peer -> windowSize = ENET_PROTOCOL_MINIMUM_WINDOW_SIZE;
-    else
-    if (peer -> windowSize > ENET_PROTOCOL_MAXIMUM_WINDOW_SIZE)
-      peer -> windowSize = ENET_PROTOCOL_MAXIMUM_WINDOW_SIZE;
+    // 範囲チェック
+    if (peer -> windowSize < ENET_PROTOCOL_MINIMUM_WINDOW_SIZE) {
+        peer -> windowSize = ENET_PROTOCOL_MINIMUM_WINDOW_SIZE;
+    }
+    else if (peer -> windowSize > ENET_PROTOCOL_MAXIMUM_WINDOW_SIZE) {
+        peer -> windowSize = ENET_PROTOCOL_MAXIMUM_WINDOW_SIZE;
+    }
 
-    if (host -> incomingBandwidth == 0)
-      windowSize = ENET_PROTOCOL_MAXIMUM_WINDOW_SIZE;
-    else
-      windowSize = (host -> incomingBandwidth / ENET_PEER_WINDOW_SIZE_SCALE) *
-                     ENET_PROTOCOL_MINIMUM_WINDOW_SIZE;
+    // 帯域制限がなければウィンドウサイズを最大値に設定する
+    // 帯域が指定されている場合はウィンドウスケールと最小ウィンドウサイズからピアのウィンドウサイズを決定する
+    if (host -> incomingBandwidth == 0) {
+        windowSize = ENET_PROTOCOL_MAXIMUM_WINDOW_SIZE;
+    }
+    else {
+        windowSize = (host -> incomingBandwidth / ENET_PEER_WINDOW_SIZE_SCALE) * ENET_PROTOCOL_MINIMUM_WINDOW_SIZE;
+    }
 
+    // 範囲チェック
     if (windowSize > ENET_NET_TO_HOST_32 (command -> connect.windowSize))
       windowSize = ENET_NET_TO_HOST_32 (command -> connect.windowSize);
 
+    // 範囲チェック
     if (windowSize < ENET_PROTOCOL_MINIMUM_WINDOW_SIZE)
       windowSize = ENET_PROTOCOL_MINIMUM_WINDOW_SIZE;
-    else
-    if (windowSize > ENET_PROTOCOL_MAXIMUM_WINDOW_SIZE)
+    else if (windowSize > ENET_PROTOCOL_MAXIMUM_WINDOW_SIZE)
       windowSize = ENET_PROTOCOL_MAXIMUM_WINDOW_SIZE;
 
     verifyCommand.header.command = ENET_PROTOCOL_COMMAND_VERIFY_CONNECT | ENET_PROTOCOL_COMMAND_FLAG_ACKNOWLEDGE;
@@ -781,18 +785,14 @@ enet_protocol_handle_bandwidth_limit (ENetHost * host, ENetPeer * peer, const EN
 
     if (peer -> incomingBandwidth == 0 && host -> outgoingBandwidth == 0)
       peer -> windowSize = ENET_PROTOCOL_MAXIMUM_WINDOW_SIZE;
+    else if (peer -> incomingBandwidth == 0 || host -> outgoingBandwidth == 0)
+      peer -> windowSize = (ENET_MAX (peer -> incomingBandwidth, host -> outgoingBandwidth) / ENET_PEER_WINDOW_SIZE_SCALE) * ENET_PROTOCOL_MINIMUM_WINDOW_SIZE;
     else
-    if (peer -> incomingBandwidth == 0 || host -> outgoingBandwidth == 0)
-      peer -> windowSize = (ENET_MAX (peer -> incomingBandwidth, host -> outgoingBandwidth) /
-                             ENET_PEER_WINDOW_SIZE_SCALE) * ENET_PROTOCOL_MINIMUM_WINDOW_SIZE;
-    else
-      peer -> windowSize = (ENET_MIN (peer -> incomingBandwidth, host -> outgoingBandwidth) /
-                             ENET_PEER_WINDOW_SIZE_SCALE) * ENET_PROTOCOL_MINIMUM_WINDOW_SIZE;
+      peer -> windowSize = (ENET_MIN (peer -> incomingBandwidth, host -> outgoingBandwidth) / ENET_PEER_WINDOW_SIZE_SCALE) * ENET_PROTOCOL_MINIMUM_WINDOW_SIZE;
 
     if (peer -> windowSize < ENET_PROTOCOL_MINIMUM_WINDOW_SIZE)
       peer -> windowSize = ENET_PROTOCOL_MINIMUM_WINDOW_SIZE;
-    else
-    if (peer -> windowSize > ENET_PROTOCOL_MAXIMUM_WINDOW_SIZE)
+    else if (peer -> windowSize > ENET_PROTOCOL_MAXIMUM_WINDOW_SIZE)
       peer -> windowSize = ENET_PROTOCOL_MAXIMUM_WINDOW_SIZE;
 
     return 0;

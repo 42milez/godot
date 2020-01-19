@@ -202,13 +202,14 @@ enet_host_connect (ENetHost * host, const ENetAddress * address, size_t channelC
     currentPeer -> address = * address;
     currentPeer -> connectID = ++ host -> randomSeed;
 
+    // 帯域制限がなければウィンドウサイズを最大値に設定する
+    // 帯域が指定されている場合はウィンドウスケールと最小ウィンドウサイズからピアのウィンドウサイズを決定する
     if (host -> outgoingBandwidth == 0)
       currentPeer -> windowSize = ENET_PROTOCOL_MAXIMUM_WINDOW_SIZE;
     else
-      currentPeer -> windowSize = (host -> outgoingBandwidth /
-                                    ENET_PEER_WINDOW_SIZE_SCALE) * 
-                                      ENET_PROTOCOL_MINIMUM_WINDOW_SIZE;
+      currentPeer -> windowSize = (host -> outgoingBandwidth / ENET_PEER_WINDOW_SIZE_SCALE) * ENET_PROTOCOL_MINIMUM_WINDOW_SIZE;
 
+    // 範囲チェック
     if (currentPeer -> windowSize < ENET_PROTOCOL_MINIMUM_WINDOW_SIZE)
       currentPeer -> windowSize = ENET_PROTOCOL_MINIMUM_WINDOW_SIZE;
     else
