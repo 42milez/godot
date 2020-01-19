@@ -1501,28 +1501,30 @@ enet_protocol_send_reliable_outgoing_commands (ENetHost * host, ENetPeer * peer)
        outgoingCommand = (ENetOutgoingCommand *) currentCommand;
 
        channel = outgoingCommand -> command.header.channelID < peer -> channelCount ? & peer -> channels [outgoingCommand -> command.header.channelID] : NULL;
+
+       // コマンドが所属するウィンドウを特定する
        reliableWindow = outgoingCommand -> reliableSequenceNumber / ENET_PEER_RELIABLE_WINDOW_SIZE;
+       
        if (channel != NULL)
        {
            if (! windowWrap &&                                                                   // フラグが立っていない
                outgoingCommand -> sendAttempts < 1 &&                                            // 送信試行回数が1回未満
-               ! (outgoingCommand -> reliableSequenceNumber % ENET_PEER_RELIABLE_WINDOW_SIZE) && // シーケンス番号が4096未満でない　
-               // 該当するウィンドウ管理領域のサイズが4096以上（シーケンス番号からウィンドウを特定）
+               ! (outgoingCommand -> reliableSequenceNumber % ENET_PEER_RELIABLE_WINDOW_SIZE) && // コマンドがウィンドウを跨いでいる（Wrap）
+                                                                                                 // 1つのウィンドウのサイズは4096なので、例えばシーケンス番号が0から4095までの断片データは同一ウィンドウで送信される
+               // 1つ前のウィンドウを使用する断片データが4096以上
                (channel -> reliableWindows [(reliableWindow + ENET_PEER_RELIABLE_WINDOWS - 1) % ENET_PEER_RELIABLE_WINDOWS] >= ENET_PEER_RELIABLE_WINDOW_SIZE ||
-                 // ウィンドウ管理フラグ？が既に使用されている
-                 channel -> usedReliableWindows & (
-                   (((1 << ENET_PEER_FREE_RELIABLE_WINDOWS) - 1) << reliableWindow) |
-                   (((1 << ENET_PEER_FREE_RELIABLE_WINDOWS) - 1) >> (ENET_PEER_RELIABLE_WINDOWS - reliableWindow))
-                 )
-               )
-           )
-             windowWrap = 1;
-          if (windowWrap)
-          {
-             currentCommand = enet_list_next (currentCommand);
-
-             continue;
-          }
+                // ウィンドウ管理フラグ？が既に使用されている
+                channel -> usedReliableWindows & (
+                    (((1 << ENET_PEER_FREE_RELIABLE_WINDOWS) - 1) << reliableWindow) |
+                    (((1 << ENET_PEER_FREE_RELIABLE_WINDOWS) - 1) >> (ENET_PEER_RELIABLE_WINDOWS - reliableWindow)))))
+           {
+               windowWrap = 1;
+           }
+             
+           if (windowWrap) {
+               currentCommand = enet_list_next (currentCommand);
+               continue;
+           }
        }
 
        if (outgoingCommand -> packet != NULL)
