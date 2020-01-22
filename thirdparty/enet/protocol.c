@@ -551,6 +551,8 @@ enet_protocol_handle_send_fragment (ENetHost * host, ENetPeer * peer, const ENet
     if (startSequenceNumber < channel -> incomingReliableSequenceNumber)
       startWindow += ENET_PEER_RELIABLE_WINDOWS;
 
+    // ▶ フラグメントの所属ウィンドウ（startWindow）が currentWindow 未満の場合は既に受信したフラグメントなので破棄する
+    // ▶
     if (startWindow < currentWindow || startWindow >= currentWindow + ENET_PEER_FREE_RELIABLE_WINDOWS - 1)
       return 0;
 
@@ -578,7 +580,7 @@ enet_protocol_handle_send_fragment (ENetHost * host, ENetPeer * peer, const ENet
        // startSequenceNumber が incomingReliableSequenceNumber より大きい：先頭セグメント未受信
        if (startSequenceNumber >= channel -> incomingReliableSequenceNumber)
        {
-          // 
+          //
           if (incomingCommand -> reliableSequenceNumber < channel -> incomingReliableSequenceNumber)
             continue;
        }
@@ -1502,31 +1504,31 @@ enet_protocol_send_reliable_outgoing_commands (ENetHost * host, ENetPeer * peer)
 
        channel = outgoingCommand -> command.header.channelID < peer -> channelCount ? & peer -> channels [outgoingCommand -> command.header.channelID] : NULL;
 
-       // コマンドが所属するウィンドウを特定する
+       // コマンドが所属するウィンドウを特定する（reliableWindows[]のインデックスを求める）
        reliableWindow = outgoingCommand -> reliableSequenceNumber / ENET_PEER_RELIABLE_WINDOW_SIZE;
-       
-       if (channel != NULL)
-       {
-           if (! windowWrap &&                                                                   // フラグが立っていない
-               outgoingCommand -> sendAttempts < 1 &&                                            // 送信試行回数が1回未満
-               ! (outgoingCommand -> reliableSequenceNumber % ENET_PEER_RELIABLE_WINDOW_SIZE) && // コマンドがウィンドウを跨いでいる（Wrap）
-                                                                                                 // 1つのウィンドウのサイズは4096なので、例えばシーケンス番号が0から4095までの断片データは同一ウィンドウで送信される
-               // 1つ前のウィンドウを使用する断片データが4096以上
+
+       // Wrap Around チェック
+       if (channel != NULL) {
+           if (! windowWrap &&                                                                   // ウィンドウを跨いでいない
+               outgoingCommand -> sendAttempts < 1 &&                                            // 未送信である
+               ! (outgoingCommand -> reliableSequenceNumber % ENET_PEER_RELIABLE_WINDOW_SIZE) && // reliableWindows[]は１要素が 4095 までカウントアップされるため、剰余が 0 である場合はシーケンス番号がウィンドウを跨いでいる
+               // 1つ前のウィンドウが4096に達している（4096に達することはないのでは？）
                (channel -> reliableWindows [(reliableWindow + ENET_PEER_RELIABLE_WINDOWS - 1) % ENET_PEER_RELIABLE_WINDOWS] >= ENET_PEER_RELIABLE_WINDOW_SIZE ||
-                // ウィンドウ管理フラグ？が既に使用されている
+                // 当該ウィンドウを含む前方８ウィンドウが使用中
                 channel -> usedReliableWindows & (
                     (((1 << ENET_PEER_FREE_RELIABLE_WINDOWS) - 1) << reliableWindow) |
                     (((1 << ENET_PEER_FREE_RELIABLE_WINDOWS) - 1) >> (ENET_PEER_RELIABLE_WINDOWS - reliableWindow)))))
            {
                windowWrap = 1;
            }
-             
+
            if (windowWrap) {
                currentCommand = enet_list_next (currentCommand);
                continue;
            }
        }
 
+       // ウィンドウ制御
        if (outgoingCommand -> packet != NULL)
        {
           if (! windowExceeded)
