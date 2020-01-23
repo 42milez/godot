@@ -1522,7 +1522,7 @@ static int enet_protocol_send_reliable_outgoing_commands(ENetHost *host,
       if (!windowWrap &&                                                                  // ウィンドウを跨いでいない
           outgoingCommand->sendAttempts < 1 &&                                            // 未送信である
           !(outgoingCommand->reliableSequenceNumber % ENET_PEER_RELIABLE_WINDOW_SIZE) &&  // reliableWindows[]は１要素が 4095 までカウントアップされるため、剰余が 0 である場合はシーケンス番号がウィンドウを跨いでいる
-          // 1つ前のウィンドウが4096に達している（4096に達することはないのでは？）
+          // 1つ前のウィンドウが4096に達している
           (channel->reliableWindows[(reliableWindow + ENET_PEER_RELIABLE_WINDOWS - 1) % ENET_PEER_RELIABLE_WINDOWS] >= ENET_PEER_RELIABLE_WINDOW_SIZE ||
            // 当該ウィンドウを含む前方８ウィンドウが使用中
            channel->usedReliableWindows &
