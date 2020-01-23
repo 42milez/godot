@@ -577,9 +577,14 @@ ENetAcknowledgement *enet_peer_queue_acknowledgement(ENetPeer *peer, const ENetP
     enet_uint16 reliableWindow = command->header.reliableSequenceNumber / ENET_PEER_RELIABLE_WINDOW_SIZE,
                 currentWindow = channel->incomingReliableSequenceNumber / ENET_PEER_RELIABLE_WINDOW_SIZE;
 
+    // セグメントオーダーが前後するための対策？
+    // トランスミッターとレシーバーでウィンドウサイズが異なる場合の対策？
     if (command->header.reliableSequenceNumber < channel->incomingReliableSequenceNumber)
       reliableWindow += ENET_PEER_RELIABLE_WINDOWS;
 
+    // currentWindow + ENET_PEER_FREE_RELIABLE_WINDOWS - 1 [A]
+    // currentWindow + ENET_PEER_FREE_RELIABLE_WINDOWS     [B]
+    // A <= reliableWindow <= B
     if (reliableWindow >= currentWindow + ENET_PEER_FREE_RELIABLE_WINDOWS - 1 &&
         reliableWindow <= currentWindow + ENET_PEER_FREE_RELIABLE_WINDOWS)
       return NULL;
