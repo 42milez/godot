@@ -569,8 +569,7 @@ void enet_peer_disconnect_later(ENetPeer *peer, enet_uint32 data) {
     enet_peer_disconnect(peer, data);
 }
 
-ENetAcknowledgement *enet_peer_queue_acknowledgement(
-    ENetPeer *peer, const ENetProtocol *command, enet_uint16 sentTime) {
+ENetAcknowledgement *enet_peer_queue_acknowledgement(ENetPeer *peer, const ENetProtocol *command, enet_uint16 sentTime) {
   ENetAcknowledgement *acknowledgement;
 
   if (command->header.channelID < peer->channelCount) {
