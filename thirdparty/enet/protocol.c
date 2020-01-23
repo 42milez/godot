@@ -1522,14 +1522,19 @@ static int enet_protocol_send_reliable_outgoing_commands(ENetHost *host,
       if (!windowWrap &&
           outgoingCommand->sendAttempts < 1 &&
           // 剰余が 0 である場合はシーケンス番号がウィンドウを跨いでいる
-          !(outgoingCommand->reliableSequenceNumber % ENET_PEER_RELIABLE_WINDOW_SIZE) && (
-            // 1つ前のウィンドウが4096に達している
+          !(outgoingCommand->reliableSequenceNumber % ENET_PEER_RELIABLE_WINDOW_SIZE) &&
+          // おそらく reliableWindows[] のうちアクティブになれる（ ACK を待つ）ウィンドウを１つだけとする設計になっている
+          // 要は、Wrapしたタイミングで、そのコマンドが所属するウィンドウ以外に既にアクティブなものがあれば、転送を一時的に中断する
+          (
+            // １つ前のウィンドウが 4096 に達している
             channel->reliableWindows[(reliableWindow + ENET_PEER_RELIABLE_WINDOWS - 1) % ENET_PEER_RELIABLE_WINDOWS] >= ENET_PEER_RELIABLE_WINDOW_SIZE ||
             // ENET_PEER_FREE_RELIABLE_WINDOWS は「使用可能なウィンドウ」を表す
             // ENET_PEER_FREE_RELIABLE_WINDOWS が 8 なら reliableWindows[] のうち、使えるウィンドウは 8 つとなる
             channel->usedReliableWindows & (
               (((1 << ENET_PEER_FREE_RELIABLE_WINDOWS) - 1) << reliableWindow) |
-              (((1 << ENET_PEER_FREE_RELIABLE_WINDOWS) - 1) >> (ENET_PEER_RELIABLE_WINDOWS - reliableWindow)))))
+              (((1 << ENET_PEER_FREE_RELIABLE_WINDOWS) - 1) >> (ENET_PEER_RELIABLE_WINDOWS - reliableWindow)))
+            )
+          )
       {
         windowWrap = 1;
       }
