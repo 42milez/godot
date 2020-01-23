@@ -575,10 +575,8 @@ ENetAcknowledgement *enet_peer_queue_acknowledgement(
 
   if (command->header.channelID < peer->channelCount) {
     ENetChannel *channel = &peer->channels[command->header.channelID];
-    enet_uint16 reliableWindow = command->header.reliableSequenceNumber /
-                                 ENET_PEER_RELIABLE_WINDOW_SIZE,
-                currentWindow = channel->incomingReliableSequenceNumber /
-                                ENET_PEER_RELIABLE_WINDOW_SIZE;
+    enet_uint16 reliableWindow = command->header.reliableSequenceNumber / ENET_PEER_RELIABLE_WINDOW_SIZE,
+                currentWindow = channel->incomingReliableSequenceNumber / ENET_PEER_RELIABLE_WINDOW_SIZE;
 
     if (command->header.reliableSequenceNumber < channel->incomingReliableSequenceNumber)
       reliableWindow += ENET_PEER_RELIABLE_WINDOWS;
@@ -588,8 +586,8 @@ ENetAcknowledgement *enet_peer_queue_acknowledgement(
       return NULL;
   }
 
-  acknowledgement =
-      (ENetAcknowledgement *)enet_malloc(sizeof(ENetAcknowledgement));
+  acknowledgement = (ENetAcknowledgement *)enet_malloc(sizeof(ENetAcknowledgement));
+
   if (acknowledgement == NULL) return NULL;
 
   peer->outgoingDataTotal += sizeof(ENetProtocolAcknowledge);
