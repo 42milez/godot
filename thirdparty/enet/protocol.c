@@ -1517,17 +1517,19 @@ static int enet_protocol_send_reliable_outgoing_commands(ENetHost *host,
     // コマンドが所属するウィンドウを特定する（reliableWindows[]のインデックスを求める）
     reliableWindow = outgoingCommand->reliableSequenceNumber / ENET_PEER_RELIABLE_WINDOW_SIZE;
 
-    // Wrap Around チェック
+    // セグメントが詰まっている場合はバッファへのコマンド転送を一時的に中断する
     if (channel != NULL) {
-      if (!windowWrap &&                                                                  // ウィンドウを跨いでいない
-          outgoingCommand->sendAttempts < 1 &&                                            // 未送信である
-          !(outgoingCommand->reliableSequenceNumber % ENET_PEER_RELIABLE_WINDOW_SIZE) &&  // reliableWindows[]は１要素が 4095 までカウントアップされるため、剰余が 0 である場合はシーケンス番号がウィンドウを跨いでいる
-          // 1つ前のウィンドウが4096に達している
-          (channel->reliableWindows[(reliableWindow + ENET_PEER_RELIABLE_WINDOWS - 1) % ENET_PEER_RELIABLE_WINDOWS] >= ENET_PEER_RELIABLE_WINDOW_SIZE ||
-           // 当該ウィンドウを含む前方８ウィンドウが使用中
-           channel->usedReliableWindows &
-               ((((1 << ENET_PEER_FREE_RELIABLE_WINDOWS) - 1) << reliableWindow) |
-                (((1 << ENET_PEER_FREE_RELIABLE_WINDOWS) - 1) >> (ENET_PEER_RELIABLE_WINDOWS - reliableWindow)))))
+      if (!windowWrap &&
+          outgoingCommand->sendAttempts < 1 &&
+          // 剰余が 0 である場合はシーケンス番号がウィンドウを跨いでいる
+          !(outgoingCommand->reliableSequenceNumber % ENET_PEER_RELIABLE_WINDOW_SIZE) && (
+            // 1つ前のウィンドウが4096に達している
+            channel->reliableWindows[(reliableWindow + ENET_PEER_RELIABLE_WINDOWS - 1) % ENET_PEER_RELIABLE_WINDOWS] >= ENET_PEER_RELIABLE_WINDOW_SIZE ||
+            // ENET_PEER_FREE_RELIABLE_WINDOWS は「使用可能なウィンドウ」を表す
+            // ENET_PEER_FREE_RELIABLE_WINDOWS が 8 なら reliableWindows[] のうち、使えるウィンドウは 8 つとなる
+            channel->usedReliableWindows & (
+              (((1 << ENET_PEER_FREE_RELIABLE_WINDOWS) - 1) << reliableWindow) |
+              (((1 << ENET_PEER_FREE_RELIABLE_WINDOWS) - 1) >> (ENET_PEER_RELIABLE_WINDOWS - reliableWindow)))))
       {
         windowWrap = 1;
       }
