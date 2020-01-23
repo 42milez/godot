@@ -580,8 +580,7 @@ ENetAcknowledgement *enet_peer_queue_acknowledgement(
                 currentWindow = channel->incomingReliableSequenceNumber /
                                 ENET_PEER_RELIABLE_WINDOW_SIZE;
 
-    if (command->header.reliableSequenceNumber <
-        channel->incomingReliableSequenceNumber)
+    if (command->header.reliableSequenceNumber < channel->incomingReliableSequenceNumber)
       reliableWindow += ENET_PEER_RELIABLE_WINDOWS;
 
     if (reliableWindow >= currentWindow + ENET_PEER_FREE_RELIABLE_WINDOWS - 1 &&
