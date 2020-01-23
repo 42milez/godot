@@ -569,21 +569,17 @@ void enet_peer_disconnect_later(ENetPeer *peer, enet_uint32 data) {
     enet_peer_disconnect(peer, data);
 }
 
-ENetAcknowledgement *enet_peer_queue_acknowledgement(
-    ENetPeer *peer, const ENetProtocol *command, enet_uint16 sentTime) {
+ENetAcknowledgement *enet_peer_queue_acknowledgement(ENetPeer *peer, const ENetProtocol *command, enet_uint16 sentTime) {
   ENetAcknowledgement *acknowledgement;
 
   if (command->header.channelID < peer->channelCount) {
     ENetChannel *channel = &peer->channels[command->header.channelID];
-    enet_uint16 reliableWindow = command->header.reliableSequenceNumber /
-                                 ENET_PEER_RELIABLE_WINDOW_SIZE,
-                currentWindow = channel->incomingReliableSequenceNumber /
-                                ENET_PEER_RELIABLE_WINDOW_SIZE;
+    enet_uint16 reliableWindow = command->header.reliableSequenceNumber / ENET_PEER_RELIABLE_WINDOW_SIZE,
+                currentWindow = channel->incomingReliableSequenceNumber / ENET_PEER_RELIABLE_WINDOW_SIZE;
 
     // セグメントオーダーが前後するための対策？
     // トランスミッターとレシーバーでウィンドウサイズが異なる場合の対策？
-    if (command->header.reliableSequenceNumber <
-        channel->incomingReliableSequenceNumber)
+    if (command->header.reliableSequenceNumber < channel->incomingReliableSequenceNumber)
       reliableWindow += ENET_PEER_RELIABLE_WINDOWS;
 
     // currentWindow + ENET_PEER_FREE_RELIABLE_WINDOWS - 1 [A]

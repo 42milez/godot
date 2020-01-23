@@ -1515,30 +1515,20 @@ static int enet_protocol_send_reliable_outgoing_commands(ENetHost *host,
                   : NULL;
 
     // コマンドが所属するウィンドウを特定する（reliableWindows[]のインデックスを求める）
-    reliableWindow = outgoingCommand->reliableSequenceNumber /
-                     ENET_PEER_RELIABLE_WINDOW_SIZE;
+    reliableWindow = outgoingCommand->reliableSequenceNumber / ENET_PEER_RELIABLE_WINDOW_SIZE;
 
     // Wrap Around チェック
     if (channel != NULL) {
-      if (!windowWrap &&  // ウィンドウを跨いでいない
-          outgoingCommand->sendAttempts < 1 &&  // 未送信である
-          !(outgoingCommand->reliableSequenceNumber %
-            ENET_PEER_RELIABLE_WINDOW_SIZE) &&  // reliableWindows[]は１要素が
-                                                // 4095
-                                                // までカウントアップされるため、剰余が
-                                                // 0
-                                                // である場合はシーケンス番号がウィンドウを跨いでいる
+      if (!windowWrap &&                                                                  // ウィンドウを跨いでいない
+          outgoingCommand->sendAttempts < 1 &&                                            // 未送信である
+          !(outgoingCommand->reliableSequenceNumber % ENET_PEER_RELIABLE_WINDOW_SIZE) &&  // reliableWindows[]は１要素が 4095 までカウントアップされるため、剰余が 0 である場合はシーケンス番号がウィンドウを跨いでいる
           // 1つ前のウィンドウが4096に達している（4096に達することはないのでは？）
-          (channel->reliableWindows[(reliableWindow +
-                                     ENET_PEER_RELIABLE_WINDOWS - 1) %
-                                    ENET_PEER_RELIABLE_WINDOWS] >=
-               ENET_PEER_RELIABLE_WINDOW_SIZE ||
+          (channel->reliableWindows[(reliableWindow + ENET_PEER_RELIABLE_WINDOWS - 1) % ENET_PEER_RELIABLE_WINDOWS] >= ENET_PEER_RELIABLE_WINDOW_SIZE ||
            // 当該ウィンドウを含む前方８ウィンドウが使用中
            channel->usedReliableWindows &
-               ((((1 << ENET_PEER_FREE_RELIABLE_WINDOWS) - 1)
-                 << reliableWindow) |
-                (((1 << ENET_PEER_FREE_RELIABLE_WINDOWS) - 1) >>
-                 (ENET_PEER_RELIABLE_WINDOWS - reliableWindow))))) {
+               ((((1 << ENET_PEER_FREE_RELIABLE_WINDOWS) - 1) << reliableWindow) |
+                (((1 << ENET_PEER_FREE_RELIABLE_WINDOWS) - 1) >> (ENET_PEER_RELIABLE_WINDOWS - reliableWindow)))))
+      {
         windowWrap = 1;
       }
 
@@ -1551,11 +1541,9 @@ static int enet_protocol_send_reliable_outgoing_commands(ENetHost *host,
     // ウィンドウ制御
     if (outgoingCommand->packet != NULL) {
       if (!windowExceeded) {
-        enet_uint32 windowSize = (peer->packetThrottle * peer->windowSize) /
-                                 ENET_PEER_PACKET_THROTTLE_SCALE;
+        enet_uint32 windowSize = (peer->packetThrottle * peer->windowSize) / ENET_PEER_PACKET_THROTTLE_SCALE;
 
-        if (peer->reliableDataInTransit + outgoingCommand->fragmentLength >
-            ENET_MAX(windowSize, peer->mtu))
+        if (peer->reliableDataInTransit + outgoingCommand->fragmentLength > ENET_MAX(windowSize, peer->mtu))
           windowExceeded = 1;
       }
       if (windowExceeded) {
