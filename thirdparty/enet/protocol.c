@@ -1525,7 +1525,7 @@ static int enet_protocol_send_reliable_outgoing_commands(ENetHost *host,
           !(outgoingCommand->reliableSequenceNumber % ENET_PEER_RELIABLE_WINDOW_SIZE) &&
           // [重要]
           // おそらく reliableWindows[] のうちアクティブになれる（ ACK を待つ）ウィンドウを１つだけとする設計になっている
-          // 要は、Wrapしたタイミングで、そのコマンドが所属するウィンドウ以外に既にアクティブなものがあれば、転送を一時的に中断する
+          // 要は、Wrapしたタイミングで、そのコマンドが所属するウィンドウ以外に既にアクティブなものがあれば、送信バッファへのコマンド転送を一時的に中断する
           (
             // １つ前のウィンドウが 4096 に達している
             channel->reliableWindows[(reliableWindow + ENET_PEER_RELIABLE_WINDOWS - 1) % ENET_PEER_RELIABLE_WINDOWS] >= ENET_PEER_RELIABLE_WINDOW_SIZE ||
