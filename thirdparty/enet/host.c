@@ -333,6 +333,8 @@ void enet_host_bandwidth_throttle(ENetHost *host) {
 
   if (host->outgoingBandwidth != 0) {
     dataTotal = 0;
+    // outgoingBandwidthの単位はbytes per secondであることと、本関数（enet_host_bandwidth_throttle）は1秒ごとに呼ばれるので、
+    // bandwidthの値は、おおむねhost->outgoingBandwidthに近似すると思われる
     bandwidth = (host->outgoingBandwidth * elapsedTime) / 1000;
 
     for (peer = host->peers; peer < &host->peers[host->peerCount]; ++peer) {
@@ -350,21 +352,23 @@ void enet_host_bandwidth_throttle(ENetHost *host) {
     if (dataTotal <= bandwidth)
       throttle = ENET_PEER_PACKET_THROTTLE_SCALE;
     else
+      // (bandwidth / dataTotal) * ENET_PEER_PACKET_THROTTLE_SCALE の方が意図が伝わりやすいのでは？
       throttle = (bandwidth * ENET_PEER_PACKET_THROTTLE_SCALE) / dataTotal;
 
     for (peer = host->peers; peer < &host->peers[host->peerCount]; ++peer) {
       enet_uint32 peerBandwidth;
 
-      if ((peer->state != ENET_PEER_STATE_CONNECTED &&
-           peer->state != ENET_PEER_STATE_DISCONNECT_LATER) ||
+      if ((peer->state != ENET_PEER_STATE_CONNECTED && peer->state != ENET_PEER_STATE_DISCONNECT_LATER) ||
           peer->incomingBandwidth == 0 ||
           peer->outgoingBandwidthThrottleEpoch == timeCurrent)
         continue;
 
+      // peer->incomingBandwidth * (elapsedTime / 1000) の方が意図が伝わりやすいのでは？
+      // 本関数が1秒ごとに呼ばれるので、peerBandwidthもpeer->incomingBandwidthに近い値になると思われる
       peerBandwidth = (peer->incomingBandwidth * elapsedTime) / 1000;
-      if ((throttle * peer->outgoingDataTotal) /
-              ENET_PEER_PACKET_THROTTLE_SCALE <=
-          peerBandwidth)
+
+      // 
+      if ((throttle * peer->outgoingDataTotal) / ENET_PEER_PACKET_THROTTLE_SCALE <= peerBandwidth)
         continue;
 
       peer->packetThrottleLimit =

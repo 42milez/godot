@@ -1886,6 +1886,7 @@ int enet_host_service(ENetHost *host, ENetEvent *event, enet_uint32 timeout) {
   timeout += host->serviceTime;
 
   do {
+    // 1秒ごとに帯域を計算する
     if (ENET_TIME_DIFFERENCE(host->serviceTime, host->bandwidthThrottleEpoch) >= ENET_HOST_BANDWIDTH_THROTTLE_INTERVAL)
       enet_host_bandwidth_throttle(host);
 
