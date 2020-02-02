@@ -201,9 +201,7 @@ ENetPeer *enet_host_connect(ENetHost *host, const ENetAddress *address,
 		currentPeer->windowSize = ENET_PROTOCOL_MAXIMUM_WINDOW_SIZE;
 	else
 		// 正規化して、基準をENET_PROTOCOL_MINIMUM_WINDOW_SIZEに合わせる
-		currentPeer->windowSize =
-				(host->outgoingBandwidth / ENET_PEER_WINDOW_SIZE_SCALE) *
-				ENET_PROTOCOL_MINIMUM_WINDOW_SIZE;
+		currentPeer->windowSize = (host->outgoingBandwidth / ENET_PEER_WINDOW_SIZE_SCALE) * ENET_PROTOCOL_MINIMUM_WINDOW_SIZE;
 
 	// 範囲チェック
 	if (currentPeer->windowSize < ENET_PROTOCOL_MINIMUM_WINDOW_SIZE)
@@ -341,14 +339,14 @@ void enet_host_bandwidth_throttle(ENetHost *host) {
         return;
     }
 
-    // ホストの送信帯域幅が 0（無制限）でない場合は帯域遅延積（送信可能なデータ量）を計算する
+    // - 実際の帯域幅を計算する
+    // - 送信データの総量を計算する
 	if (host->outgoingBandwidth != 0) {
 		dataTotal = 0;
 		// outgoingBandwidth の単位は bytes per second であることと、本関数（ enet_host_bandwidth_throttle ）は 1 秒ごとに呼ばれるので、
 		// bandwidth の値は、概ね host->outgoingBandwidth に近似すると思われる
 		bandwidth = (host->outgoingBandwidth * elapsedTime) / 1000;
 
-        // ホストから送出されるデータの総量を求める
 		for (peer = host->peers; peer < &host->peers[host->peerCount]; ++peer) {
 			if (peer->state != ENET_PEER_STATE_CONNECTED && peer->state != ENET_PEER_STATE_DISCONNECT_LATER) {
 				continue;
@@ -358,29 +356,42 @@ void enet_host_bandwidth_throttle(ENetHost *host) {
 		}
 	}
 
+    // ピア毎のスロットリングスケールを計算する
 	while (peersRemaining > 0 && needsAdjustment != 0) {
 		needsAdjustment = 0;
 
-        // 
-		if (dataTotal <= bandwidth)
-			throttle = ENET_PEER_PACKET_THROTTLE_SCALE;
-		else
-			// dataTotal が大きいほど、throttle は小さくなる
+        // ホストの送信バンド幅と送信データ量から、ホストのスロットリングスケールを計算する
+		if (dataTotal <= bandwidth) {
+            throttle = ENET_PEER_PACKET_THROTTLE_SCALE;
+        }
+        else {
+            // dataTotal < bandwidth であれば、帯域に余裕があるのでスループットを増加させる（throttle > 1）
+            // dataTotal == bandwidth であれば、スロットリングを行わない
+            // dataTotal >= bandwidth であれば、スループットを減少させる（throttle < 1）
 			throttle = (bandwidth * ENET_PEER_PACKET_THROTTLE_SCALE) / dataTotal;
+        }
 
 		for (peer = host->peers; peer < &host->peers[host->peerCount]; ++peer) {
 			enet_uint32 peerBandwidth;
 
+            // 以下のケースにおいては、計算をスキップする
+            //   - ピアとのコネクションが確立されていない
+            //   - ピアの受信バンド幅が無制限
+            //   - ???
 			if ((peer->state != ENET_PEER_STATE_CONNECTED && peer->state != ENET_PEER_STATE_DISCONNECT_LATER) ||
-					peer->incomingBandwidth == 0 ||
-					peer->outgoingBandwidthThrottleEpoch == timeCurrent)
-				continue;
+				peer->incomingBandwidth == 0 ||
+				peer->outgoingBandwidthThrottleEpoch == timeCurrent)
+            {
+                continue;
+            }
 
-			// 本関数が 1 秒ごとに呼ばれるので、peerBandwidth も peer->incomingBandwidth に近い値になると思われる
+            // - ピアの受信バンド幅を計算する
+			// - 本関数が 1 秒ごとに呼ばれるため、peerBandwidth も peer->incomingBandwidth に近い値になると思われる
 			peerBandwidth = (peer->incomingBandwidth * elapsedTime) / 1000;
 
+            // ホストのスケールでスロットリングを実施しても送信データ量がピアの受信バンド幅を上回る場合は、
+            // さらにピアの受信バンド幅に対してスロットリングを行う。
 			if ((throttle * peer->outgoingDataTotal) / ENET_PEER_PACKET_THROTTLE_SCALE <= peerBandwidth)
-				// 帯域はそのまま
 				continue;
 
 			// 0 から ENET_PEER_PACKET_THROTTLE_SCALE までの値におさめる
@@ -399,8 +410,10 @@ void enet_host_bandwidth_throttle(ENetHost *host) {
 			peer->outgoingDataTotal = 0;
 
 			needsAdjustment = 1;
+
 			--peersRemaining;
-			bandwidth -= peerBandwidth;
+			
+            bandwidth -= peerBandwidth;
 			dataTotal -= peerBandwidth;
 		}
 	}
