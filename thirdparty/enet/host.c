@@ -360,7 +360,10 @@ void enet_host_bandwidth_throttle(ENetHost *host) {
 	while (peersRemaining > 0 && needsAdjustment != 0) {
 		needsAdjustment = 0;
 
-        // ホストの送信バンド幅と送信データ量から、ホストのスロットリングスケールを計算する
+        // ホストの転送レート（送信）と送信データ量から、ホストのスロットリングスケールを計算する
+        //
+        // Note:
+        //   throttle の値が送信時に直接使われることはない。送信はピア毎に行われるため、throttle の値を元にピア毎のスロットル値を決定する。
 		if (dataTotal <= bandwidth) {
             throttle = ENET_PEER_PACKET_THROTTLE_SCALE;
         }
@@ -385,12 +388,11 @@ void enet_host_bandwidth_throttle(ENetHost *host) {
                 continue;
             }
 
-            // - ピアの受信バンド幅を計算する
+            // - ピアの転送レート（受信）を計算する
 			// - 本関数が 1 秒ごとに呼ばれるため、peerBandwidth も peer->incomingBandwidth に近い値になると思われる
 			peerBandwidth = (peer->incomingBandwidth * elapsedTime) / 1000;
 
-            // ホストのスケールでスロットリングを実施しても送信データ量がピアの受信バンド幅を上回る場合は、
-            // さらにピアの受信バンド幅に対してスロットリングを行う。
+            // ホストのスケールでスロットリングを実施しても送信データ量がピアの受信バンド幅を上回る場合は、さらにピアへの送信に対してスロットリングを行う。
 			if ((throttle * peer->outgoingDataTotal) / ENET_PEER_PACKET_THROTTLE_SCALE <= peerBandwidth)
 				continue;
 
