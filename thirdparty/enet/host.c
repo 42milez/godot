@@ -363,7 +363,7 @@ void enet_host_bandwidth_throttle(ENetHost *host) {
         // ホストの転送レート（送信）と送信データ量から、ホストのスロットリングスケールを計算する
         //
         // Note:
-        //   throttle の値が送信時に直接使われることはない。送信はピア毎に行われるため、throttle の値を元にピア毎のスロットル値を決定する。
+        //   throttle の値が送信時に直接使われることはない。送信はピア毎に行われるため、throttle の値を元にピア毎のスロットル係数を決定する。
 		if (dataTotal <= bandwidth) {
             throttle = ENET_PEER_PACKET_THROTTLE_SCALE;
         }
@@ -389,20 +389,23 @@ void enet_host_bandwidth_throttle(ENetHost *host) {
             }
 
             // - ピアの転送レート（受信）を計算する
-			// - 本関数が 1 秒ごとに呼ばれるため、peerBandwidth も peer->incomingBandwidth に近い値になると思われる
+			// - 本関数は 1 秒ごとに呼ばれるため、peerBandwidth は peer->incomingBandwidth に近い値になると思われる
 			peerBandwidth = (peer->incomingBandwidth * elapsedTime) / 1000;
 
-            // ホストのスケールでスロットリングを実施しても送信データ量がピアの受信バンド幅を上回る場合は、さらにピアへの送信に対してスロットリングを行う。
+            // ホストのスケールでスロットリングを実施しても送信データ量がピアの転送レートを上回る場合は、さらにピアへの送信に対してスロットリングを行う。
+            //
+            // Note:
+            //   大まかなスロットル係数は throttle として算出し、ピア毎により精度の高いスロットル係数を算出するための処理？
 			if ((throttle * peer->outgoingDataTotal) / ENET_PEER_PACKET_THROTTLE_SCALE <= peerBandwidth)
 				continue;
 
-			// 0 から ENET_PEER_PACKET_THROTTLE_SCALE までの値におさめる
+			// スロットル係数は 0 から ENET_PEER_PACKET_THROTTLE_SCALE までの値におさめる
 			peer->packetThrottleLimit = (peerBandwidth * ENET_PEER_PACKET_THROTTLE_SCALE) / peer->outgoingDataTotal;
+			if (peer->packetThrottleLimit == 0) {
+                peer->packetThrottleLimit = 1;
+            }
 
-			if (peer->packetThrottleLimit == 0) peer->packetThrottleLimit = 1;
-
-            // peer->packetThrottle は TCP でいうところの Window Scale Option だと思われる。これを係数として、peer->windowSize を拡張する。
-            // peer->windowSize は最大 65,536 なので、peer->packetThrottle が最大値の 32 となる場合、ウィンドウサイズは 2MB まで拡張される。
+            // 
 			if (peer->packetThrottle > peer->packetThrottleLimit)
 				peer->packetThrottle = peer->packetThrottleLimit;
 
