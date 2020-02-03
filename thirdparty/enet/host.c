@@ -343,8 +343,7 @@ void enet_host_bandwidth_throttle(ENetHost *host) {
     // - 送信データの総量を計算する
 	if (host->outgoingBandwidth != 0) {
 		dataTotal = 0;
-		// outgoingBandwidth の単位は bytes per second であることと、本関数（ enet_host_bandwidth_throttle ）は 1 秒ごとに呼ばれるので、
-		// bandwidth の値は、概ね host->outgoingBandwidth に近似すると思われる
+		// host->outgoingBandwidth の単位は bytes per second
 		bandwidth = (host->outgoingBandwidth * elapsedTime) / 1000;
 
 		for (peer = host->peers; peer < &host->peers[host->peerCount]; ++peer) {
@@ -368,9 +367,7 @@ void enet_host_bandwidth_throttle(ENetHost *host) {
             throttle = ENET_PEER_PACKET_THROTTLE_SCALE;
         }
         else {
-            // dataTotal < bandwidth であれば、帯域に余裕があるのでスループットを増加させる（throttle > 1）
-            // dataTotal == bandwidth であれば、スロットリングを行わない
-            // dataTotal >= bandwidth であれば、スループットを減少させる（throttle < 1）
+            // スループットを減少させる
 			throttle = (bandwidth * ENET_PEER_PACKET_THROTTLE_SCALE) / dataTotal;
         }
 
@@ -388,14 +385,14 @@ void enet_host_bandwidth_throttle(ENetHost *host) {
                 continue;
             }
 
-            // - ピアの転送レート（受信）を計算する
-			// - 本関数は 1 秒ごとに呼ばれるため、peerBandwidth は peer->incomingBandwidth に近い値になると思われる
+            // ピアの転送レート（受信）を計算する
 			peerBandwidth = (peer->incomingBandwidth * elapsedTime) / 1000;
 
             // ホストのスケールでスロットリングを実施しても送信データ量がピアの転送レートを上回る場合は、さらにピアへの送信に対してスロットリングを行う。
             //
             // Note:
             //   大まかなスロットル係数は throttle として算出し、ピア毎により精度の高いスロットル係数を算出するための処理？
+            //   throttle はピア全体の総量から算出されたものなので、ピア各々を見たときには throttle では絞り切れないケースもあるはず
 			if ((throttle * peer->outgoingDataTotal) / ENET_PEER_PACKET_THROTTLE_SCALE <= peerBandwidth)
 				continue;
 
