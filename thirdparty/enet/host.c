@@ -420,6 +420,8 @@ void enet_host_bandwidth_throttle(ENetHost *host) {
 		}
 	}
 
+    // 上の while ブロックで処理されなかった（ピア毎のスロットル係数を計算されなかった）ピアは、ここでスロットリング係数を設定される
+    // 上の while ブロック、ピア毎の送信データと転送レートの比較をしているところに差し込めるのでは？（別途行っている意図がわからない）
 	if (peersRemaining > 0) {
 		if (dataTotal <= bandwidth)
 			throttle = ENET_PEER_PACKET_THROTTLE_SCALE;
@@ -427,10 +429,10 @@ void enet_host_bandwidth_throttle(ENetHost *host) {
 			throttle = (bandwidth * ENET_PEER_PACKET_THROTTLE_SCALE) / dataTotal;
 
 		for (peer = host->peers; peer < &host->peers[host->peerCount]; ++peer) {
-			if ((peer->state != ENET_PEER_STATE_CONNECTED &&
-						peer->state != ENET_PEER_STATE_DISCONNECT_LATER) ||
-					peer->outgoingBandwidthThrottleEpoch == timeCurrent)
-				continue;
+            // コネクションが確立されていない、もしくは既に peer->outgoingBandwidthThrottleEpoch が更新されているピアはスキップする
+			if ((peer->state != ENET_PEER_STATE_CONNECTED && peer->state != ENET_PEER_STATE_DISCONNECT_LATER) || peer->outgoingBandwidthThrottleEpoch == timeCurrent) {
+                continue;
+            }
 
 			peer->packetThrottleLimit = throttle;
 
@@ -442,6 +444,7 @@ void enet_host_bandwidth_throttle(ENetHost *host) {
 		}
 	}
 
+    // ホストの転送レートを再計算して、すべてのピアに ENET_PROTOCOL_COMMAND_BANDWIDTH_LIMIT コマンドを送信する
 	if (host->recalculateBandwidthLimits) {
 		host->recalculateBandwidthLimits = 0;
 
@@ -449,48 +452,49 @@ void enet_host_bandwidth_throttle(ENetHost *host) {
 		bandwidth = host->incomingBandwidth;
 		needsAdjustment = 1;
 
-		if (bandwidth == 0)
-			bandwidthLimit = 0;
-		else
-			while (peersRemaining > 0 && needsAdjustment != 0) {
+		if (bandwidth == 0) {
+            bandwidthLimit = 0;
+        }
+		else {
+            while (peersRemaining > 0 && needsAdjustment != 0) {
 				needsAdjustment = 0;
 				bandwidthLimit = bandwidth / peersRemaining;
 
 				for (peer = host->peers; peer < &host->peers[host->peerCount]; ++peer) {
-					if ((peer->state != ENET_PEER_STATE_CONNECTED &&
-								peer->state != ENET_PEER_STATE_DISCONNECT_LATER) ||
-							peer->incomingBandwidthThrottleEpoch == timeCurrent)
-						continue;
+					if ((peer->state != ENET_PEER_STATE_CONNECTED && peer->state != ENET_PEER_STATE_DISCONNECT_LATER) || peer->incomingBandwidthThrottleEpoch == timeCurrent) {
+                        continue;
+                    }
 
-					if (peer->outgoingBandwidth > 0 &&
-							peer->outgoingBandwidth >= bandwidthLimit)
-						continue;
+					if (peer->outgoingBandwidth > 0 && peer->outgoingBandwidth >= bandwidthLimit) {
+                        continue;
+                    }
 
 					peer->incomingBandwidthThrottleEpoch = timeCurrent;
 
 					needsAdjustment = 1;
+
 					--peersRemaining;
-					bandwidth -= peer->outgoingBandwidth;
+					
+                    bandwidth -= peer->outgoingBandwidth;
 				}
 			}
+        }
 
 		for (peer = host->peers; peer < &host->peers[host->peerCount]; ++peer) {
-			if (peer->state != ENET_PEER_STATE_CONNECTED &&
-					peer->state != ENET_PEER_STATE_DISCONNECT_LATER)
-				continue;
+			if (peer->state != ENET_PEER_STATE_CONNECTED && peer->state != ENET_PEER_STATE_DISCONNECT_LATER) {
+                continue;
+            }
 
-			command.header.command = ENET_PROTOCOL_COMMAND_BANDWIDTH_LIMIT |
-									 ENET_PROTOCOL_COMMAND_FLAG_ACKNOWLEDGE;
+			command.header.command = ENET_PROTOCOL_COMMAND_BANDWIDTH_LIMIT | ENET_PROTOCOL_COMMAND_FLAG_ACKNOWLEDGE;
 			command.header.channelID = 0xFF;
-			command.bandwidthLimit.outgoingBandwidth =
-					ENET_HOST_TO_NET_32(host->outgoingBandwidth);
+			command.bandwidthLimit.outgoingBandwidth = ENET_HOST_TO_NET_32(host->outgoingBandwidth);
 
-			if (peer->incomingBandwidthThrottleEpoch == timeCurrent)
-				command.bandwidthLimit.incomingBandwidth =
-						ENET_HOST_TO_NET_32(peer->outgoingBandwidth);
-			else
-				command.bandwidthLimit.incomingBandwidth =
-						ENET_HOST_TO_NET_32(bandwidthLimit);
+			if (peer->incomingBandwidthThrottleEpoch == timeCurrent) {
+                command.bandwidthLimit.incomingBandwidth = ENET_HOST_TO_NET_32(peer->outgoingBandwidth);
+            }
+			else {
+                command.bandwidthLimit.incomingBandwidth = ENET_HOST_TO_NET_32(bandwidthLimit);
+            }
 
 			enet_peer_queue_outgoing_command(peer, &command, NULL, 0, 0);
 		}
