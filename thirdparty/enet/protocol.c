@@ -288,16 +288,11 @@ static ENetPeer *enet_protocol_handle_connect(ENetHost *host,
   peer->connectID = command->connect.connectID;
   peer->address = host->receivedAddress;
   peer->outgoingPeerID = ENET_NET_TO_HOST_16(command->connect.outgoingPeerID);
-  peer->incomingBandwidth =
-      ENET_NET_TO_HOST_32(command->connect.incomingBandwidth);
-  peer->outgoingBandwidth =
-      ENET_NET_TO_HOST_32(command->connect.outgoingBandwidth);
-  peer->packetThrottleInterval =
-      ENET_NET_TO_HOST_32(command->connect.packetThrottleInterval);
-  peer->packetThrottleAcceleration =
-      ENET_NET_TO_HOST_32(command->connect.packetThrottleAcceleration);
-  peer->packetThrottleDeceleration =
-      ENET_NET_TO_HOST_32(command->connect.packetThrottleDeceleration);
+  peer->incomingBandwidth = ENET_NET_TO_HOST_32(command->connect.incomingBandwidth);
+  peer->outgoingBandwidth = ENET_NET_TO_HOST_32(command->connect.outgoingBandwidth);
+  peer->packetThrottleInterval = ENET_NET_TO_HOST_32(command->connect.packetThrottleInterval);
+  peer->packetThrottleAcceleration = ENET_NET_TO_HOST_32(command->connect.packetThrottleAcceleration);
+  peer->packetThrottleDeceleration = ENET_NET_TO_HOST_32(command->connect.packetThrottleDeceleration);
   peer->eventData = ENET_NET_TO_HOST_32(command->connect.data);
 
   incomingSessionID = command->connect.incomingSessionID == 0xFF
@@ -779,10 +774,8 @@ static int enet_protocol_handle_bandwidth_limit(ENetHost *host, ENetPeer *peer,
 
   if (peer->incomingBandwidth != 0) --host->bandwidthLimitedPeers;
 
-  peer->incomingBandwidth =
-      ENET_NET_TO_HOST_32(command->bandwidthLimit.incomingBandwidth);
-  peer->outgoingBandwidth =
-      ENET_NET_TO_HOST_32(command->bandwidthLimit.outgoingBandwidth);
+  peer->incomingBandwidth = ENET_NET_TO_HOST_32(command->bandwidthLimit.incomingBandwidth);
+  peer->outgoingBandwidth = ENET_NET_TO_HOST_32(command->bandwidthLimit.outgoingBandwidth);
 
   if (peer->incomingBandwidth != 0) ++host->bandwidthLimitedPeers;
 
@@ -1011,11 +1004,9 @@ static int enet_protocol_handle_incoming_commands(ENetHost *host,
   header = (ENetProtocolHeader *)host->receivedData;
 
   peerID = ENET_NET_TO_HOST_16(header->peerID);
-  sessionID = (peerID & ENET_PROTOCOL_HEADER_SESSION_MASK) >>
-              ENET_PROTOCOL_HEADER_SESSION_SHIFT;
+  sessionID = (peerID & ENET_PROTOCOL_HEADER_SESSION_MASK) >> ENET_PROTOCOL_HEADER_SESSION_SHIFT;
   flags = peerID & ENET_PROTOCOL_HEADER_FLAG_MASK;
-  peerID &=
-      ~(ENET_PROTOCOL_HEADER_FLAG_MASK | ENET_PROTOCOL_HEADER_SESSION_MASK);
+  peerID &= ~(ENET_PROTOCOL_HEADER_FLAG_MASK | ENET_PROTOCOL_HEADER_SESSION_MASK);
 
   headerSize = (flags & ENET_PROTOCOL_HEADER_FLAG_SENT_TIME
                     ? sizeof(ENetProtocolHeader)
