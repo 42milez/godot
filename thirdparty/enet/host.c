@@ -465,6 +465,7 @@ void enet_host_bandwidth_throttle(ENetHost *host) {
                         continue;
                     }
 
+                    // ホストの転送レートを超えているピアはスキップする（転送レート制限対象：ENET_PROTOCOL_COMMAND_BANDWIDTH_LIMIT）
 					if (peer->outgoingBandwidth > 0 && peer->outgoingBandwidth >= bandwidthLimit) {
                         continue;
                     }
@@ -493,6 +494,7 @@ void enet_host_bandwidth_throttle(ENetHost *host) {
                 command.bandwidthLimit.incomingBandwidth = ENET_HOST_TO_NET_32(peer->outgoingBandwidth);
             }
 			else {
+                // 上の while ループで peer->outgoingBandwidth >= bandwidthLimit の条件に当てはまってスキップされたピアの転送レートを下げる
                 command.bandwidthLimit.incomingBandwidth = ENET_HOST_TO_NET_32(bandwidthLimit);
             }
 
