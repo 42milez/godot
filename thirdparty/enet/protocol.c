@@ -1381,14 +1381,18 @@ enet_protocol_send_reliable_outgoing_commands(ENetHost *host, ENetPeer *peer) {
 
 		channel = outgoingCommand->command.header.channelID < peer->channelCount ? &peer->channels[outgoingCommand->command.header.channelID] : NULL;
 		reliableWindow = outgoingCommand->reliableSequenceNumber / ENET_PEER_RELIABLE_WINDOW_SIZE;
+
 		if (channel != NULL) {
 			if (!windowWrap &&
-					outgoingCommand->sendAttempts < 1 &&
-					!(outgoingCommand->reliableSequenceNumber % ENET_PEER_RELIABLE_WINDOW_SIZE) &&
-					(channel->reliableWindows[(reliableWindow + ENET_PEER_RELIABLE_WINDOWS - 1) % ENET_PEER_RELIABLE_WINDOWS] >= ENET_PEER_RELIABLE_WINDOW_SIZE ||
-							channel->usedReliableWindows & ((((1 << ENET_PEER_FREE_RELIABLE_WINDOWS) - 1) << reliableWindow) |
-																   (((1 << ENET_PEER_FREE_RELIABLE_WINDOWS) - 1) >> (ENET_PEER_RELIABLE_WINDOWS - reliableWindow)))))
-				windowWrap = 1;
+				outgoingCommand->sendAttempts < 1 &&
+				!(outgoingCommand->reliableSequenceNumber % ENET_PEER_RELIABLE_WINDOW_SIZE) &&
+				(channel->reliableWindows[(reliableWindow + ENET_PEER_RELIABLE_WINDOWS - 1) % ENET_PEER_RELIABLE_WINDOWS] >= ENET_PEER_RELIABLE_WINDOW_SIZE ||
+				channel->usedReliableWindows & ((((1 << ENET_PEER_FREE_RELIABLE_WINDOWS) - 1) << reliableWindow) |
+												(((1 << ENET_PEER_FREE_RELIABLE_WINDOWS) - 1) >> (ENET_PEER_RELIABLE_WINDOWS - reliableWindow)))))
+            {
+                windowWrap = 1;
+            }
+
 			if (windowWrap) {
 				currentCommand = enet_list_next(currentCommand);
 
@@ -1413,11 +1417,12 @@ enet_protocol_send_reliable_outgoing_commands(ENetHost *host, ENetPeer *peer) {
 		canPing = 0;
 
 		commandSize = commandSizes[outgoingCommand->command.header.command & ENET_PROTOCOL_COMMAND_MASK];
+
 		if (command >= &host->commands[sizeof(host->commands) / sizeof(ENetProtocol)] ||
-				buffer + 1 >= &host->buffers[sizeof(host->buffers) / sizeof(ENetBuffer)] ||
-				peer->mtu - host->packetSize < commandSize ||
-				(outgoingCommand->packet != NULL &&
-						(enet_uint16)(peer->mtu - host->packetSize) < (enet_uint16)(commandSize + outgoingCommand->fragmentLength))) {
+			buffer + 1 >= &host->buffers[sizeof(host->buffers) / sizeof(ENetBuffer)] ||
+			peer->mtu - host->packetSize < commandSize ||
+			(outgoingCommand->packet != NULL && (enet_uint16)(peer->mtu - host->packetSize) < (enet_uint16)(commandSize + outgoingCommand->fragmentLength)))
+        {
 			host->continueSending = 1;
 
 			break;
@@ -1440,8 +1445,7 @@ enet_protocol_send_reliable_outgoing_commands(ENetHost *host, ENetPeer *peer) {
 		if (enet_list_empty(&peer->sentReliableCommands))
 			peer->nextTimeout = host->serviceTime + outgoingCommand->roundTripTimeout;
 
-		enet_list_insert(enet_list_end(&peer->sentReliableCommands),
-				enet_list_remove(&outgoingCommand->outgoingCommandList));
+		enet_list_insert(enet_list_end(&peer->sentReliableCommands), enet_list_remove(&outgoingCommand->outgoingCommandList));
 
 		outgoingCommand->sentTime = host->serviceTime;
 
