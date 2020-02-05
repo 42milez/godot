@@ -324,9 +324,7 @@ void enet_host_bandwidth_throttle(ENetHost *host) {
 		dataTotal = 0;
 		bandwidth = (host->outgoingBandwidth * elapsedTime) / 1000;
 
-		for (peer = host->peers;
-				peer < &host->peers[host->peerCount];
-				++peer) {
+		for (peer = host->peers; peer < &host->peers[host->peerCount]; ++peer) {
 			if (peer->state != ENET_PEER_STATE_CONNECTED && peer->state != ENET_PEER_STATE_DISCONNECT_LATER)
 				continue;
 
@@ -342,23 +340,21 @@ void enet_host_bandwidth_throttle(ENetHost *host) {
 		else
 			throttle = (bandwidth * ENET_PEER_PACKET_THROTTLE_SCALE) / dataTotal;
 
-		for (peer = host->peers;
-				peer < &host->peers[host->peerCount];
-				++peer) {
+		for (peer = host->peers; peer < &host->peers[host->peerCount]; ++peer) {
 			enet_uint32 peerBandwidth;
 
 			if ((peer->state != ENET_PEER_STATE_CONNECTED && peer->state != ENET_PEER_STATE_DISCONNECT_LATER) ||
-					peer->incomingBandwidth == 0 ||
-					peer->outgoingBandwidthThrottleEpoch == timeCurrent)
-				continue;
+				peer->incomingBandwidth == 0 ||
+				peer->outgoingBandwidthThrottleEpoch == timeCurrent)
+            {
+                continue;
+            }
 
 			peerBandwidth = (peer->incomingBandwidth * elapsedTime) / 1000;
 			if ((throttle * peer->outgoingDataTotal) / ENET_PEER_PACKET_THROTTLE_SCALE <= peerBandwidth)
 				continue;
 
-			peer->packetThrottleLimit = (peerBandwidth *
-												ENET_PEER_PACKET_THROTTLE_SCALE) /
-										peer->outgoingDataTotal;
+			peer->packetThrottleLimit = (peerBandwidth * ENET_PEER_PACKET_THROTTLE_SCALE) / peer->outgoingDataTotal;
 
 			if (peer->packetThrottleLimit == 0)
 				peer->packetThrottleLimit = 1;
@@ -372,8 +368,10 @@ void enet_host_bandwidth_throttle(ENetHost *host) {
 			peer->outgoingDataTotal = 0;
 
 			needsAdjustment = 1;
+
 			--peersRemaining;
-			bandwidth -= peerBandwidth;
+			
+            bandwidth -= peerBandwidth;
 			dataTotal -= peerBandwidth;
 		}
 	}
@@ -384,12 +382,12 @@ void enet_host_bandwidth_throttle(ENetHost *host) {
 		else
 			throttle = (bandwidth * ENET_PEER_PACKET_THROTTLE_SCALE) / dataTotal;
 
-		for (peer = host->peers;
-				peer < &host->peers[host->peerCount];
-				++peer) {
+		for (peer = host->peers; peer < &host->peers[host->peerCount]; ++peer) {
 			if ((peer->state != ENET_PEER_STATE_CONNECTED && peer->state != ENET_PEER_STATE_DISCONNECT_LATER) ||
-					peer->outgoingBandwidthThrottleEpoch == timeCurrent)
-				continue;
+				peer->outgoingBandwidthThrottleEpoch == timeCurrent)
+            {
+                continue;
+            }
 
 			peer->packetThrottleLimit = throttle;
 
@@ -415,28 +413,27 @@ void enet_host_bandwidth_throttle(ENetHost *host) {
 				needsAdjustment = 0;
 				bandwidthLimit = bandwidth / peersRemaining;
 
-				for (peer = host->peers;
-						peer < &host->peers[host->peerCount];
-						++peer) {
+				for (peer = host->peers; peer < &host->peers[host->peerCount]; ++peer) {
 					if ((peer->state != ENET_PEER_STATE_CONNECTED && peer->state != ENET_PEER_STATE_DISCONNECT_LATER) ||
-							peer->incomingBandwidthThrottleEpoch == timeCurrent)
-						continue;
+						peer->incomingBandwidthThrottleEpoch == timeCurrent)
+                    {
+                        continue;
+                    }
 
-					if (peer->outgoingBandwidth > 0 &&
-							peer->outgoingBandwidth >= bandwidthLimit)
+					if (peer->outgoingBandwidth > 0 && peer->outgoingBandwidth >= bandwidthLimit)
 						continue;
 
 					peer->incomingBandwidthThrottleEpoch = timeCurrent;
 
 					needsAdjustment = 1;
+
 					--peersRemaining;
-					bandwidth -= peer->outgoingBandwidth;
+					
+                    bandwidth -= peer->outgoingBandwidth;
 				}
 			}
 
-		for (peer = host->peers;
-				peer < &host->peers[host->peerCount];
-				++peer) {
+		for (peer = host->peers; peer < &host->peers[host->peerCount]; ++peer) {
 			if (peer->state != ENET_PEER_STATE_CONNECTED && peer->state != ENET_PEER_STATE_DISCONNECT_LATER)
 				continue;
 
