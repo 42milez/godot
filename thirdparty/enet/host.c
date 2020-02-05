@@ -444,7 +444,7 @@ void enet_host_bandwidth_throttle(ENetHost *host) {
 		}
 	}
 
-    // ホストの転送レートを再計算して、すべてのピアに ENET_PROTOCOL_COMMAND_BANDWIDTH_LIMIT コマンドを送信する
+    // ホストの転送レートを超えるピアの転送レートを制限する
 	if (host->recalculateBandwidthLimits) {
 		host->recalculateBandwidthLimits = 0;
 
