@@ -481,6 +481,7 @@ void enet_host_bandwidth_throttle(ENetHost *host) {
 			}
         }
 
+        // ENET_PROTOCOL_COMMAND_BANDWIDTH_LIMIT コマンドをキューに投入する
 		for (peer = host->peers; peer < &host->peers[host->peerCount]; ++peer) {
 			if (peer->state != ENET_PEER_STATE_CONNECTED && peer->state != ENET_PEER_STATE_DISCONNECT_LATER) {
                 continue;
