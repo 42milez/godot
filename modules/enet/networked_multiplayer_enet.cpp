@@ -197,11 +197,13 @@ void NetworkedMultiplayerENet::poll() {
 			case ENET_EVENT_TYPE_CONNECT: {
 				// Store any relevant client information here.
 
+                // 新規接続を受け付けていないのでピアをリセットする
 				if (server && refuse_connections) {
 					enet_peer_reset(event.peer);
 					break;
 				}
 
+                // 不正なIDを排除 
 				// A client joined with an invalid ID (negative values, 0, and 1 are reserved).
 				// Probably trying to exploit us.
 				if (server && ((int)event.data < 2 || peer_map.has((int)event.data))) {
@@ -209,6 +211,7 @@ void NetworkedMultiplayerENet::poll() {
 					ERR_CONTINUE(true);
 				}
 
+                // TODO: 要調査（どういうテクニック？）
 				int *new_id = memnew(int);
 				*new_id = event.data;
 
