@@ -20,19 +20,19 @@ protected:
 	static void _bind_methods();
 
 public:
-	NetworkedMultiplayerENet();
-	~NetworkedMultiplayerENet();
+    /* ⭐ */ NetworkedMultiplayerENet();
+	/* ⭐ */ ~NetworkedMultiplayerENet();
 
-    Error create_client(const String &p_address, int p_port, int p_in_bandwidth = 0, int p_out_bandwidth = 0, int p_client_port = 0);
-	Error create_server(int p_port, int p_max_clients = 32, int p_in_bandwidth = 0, int p_out_bandwidth = 0);
+    /* ⭐ */ Error create_client(const String &p_address, int p_port, int p_in_bandwidth = 0, int p_out_bandwidth = 0, int p_client_port = 0);
+	/* ⭐ */ Error create_server(int p_port, int p_max_clients = 32, int p_in_bandwidth = 0, int p_out_bandwidth = 0);
 
-	void close_connection(uint32_t wait_usec = 100);
-	void disconnect_peer(int p_peer, bool now = false);
+	/* ⭐ */ void close_connection(uint32_t wait_usec = 100);
+	/* ⭐ */ void disconnect_peer(int p_peer, bool now = false);
 	
-	virtual void poll();
+	/* ⭐ */ virtual void poll();
 
-	virtual Error get_packet(const uint8_t **r_buffer, int &r_buffer_size); ///< buffer is GONE after next get_packet
-	virtual Error put_packet(const uint8_t *p_buffer, int p_buffer_size);
+	/* ⭐ */ virtual Error get_packet(const uint8_t **r_buffer, int &r_buffer_size); ///< buffer is GONE after next get_packet
+	/* ⭐ */ virtual Error put_packet(const uint8_t *p_buffer, int p_buffer_size);
 
 	bool is_always_ordered() const;
 	virtual bool is_refusing_new_connections() const;
