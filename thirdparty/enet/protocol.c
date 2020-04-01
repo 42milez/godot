@@ -1521,6 +1521,7 @@ static int enet_protocol_send_reliable_outgoing_commands(ENetHost *host,
         windowWrap = 1;
       }
 
+      // ウィンドウを跨いでいる場合は送信処理をスキップする
       if (windowWrap) {
         currentCommand = enet_list_next(currentCommand);
         continue;
@@ -1535,6 +1536,8 @@ static int enet_protocol_send_reliable_outgoing_commands(ENetHost *host,
         if (peer->reliableDataInTransit + outgoingCommand->fragmentLength > ENET_MAX(windowSize, peer->mtu))
           windowExceeded = 1;
       }
+
+      // 送信中コマンドのデータサイズが windowSize を超過する場合は送信処理をスキップする
       if (windowExceeded) {
         currentCommand = enet_list_next(currentCommand);
         continue;
