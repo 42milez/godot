@@ -356,8 +356,8 @@ void NetworkedMultiplayerENet::poll() {
 
 					ERR_CONTINUE(event.packet->dataLength < 8);
 
-					uint32_t source = decode_uint32(&event.packet->data[0]);
-					int target = decode_uint32(&event.packet->data[4]);
+					uint32_t source = decode_uint32(&event.packet->data[0]); // sender_id
+					int target = decode_uint32(&event.packet->data[4]);      // receiver_id
 
 					packet.from = source;
 					packet.channel = event.channelID;
@@ -368,9 +368,9 @@ void NetworkedMultiplayerENet::poll() {
 
 						packet.from = *id;
 
-						if (target == 1) {
+						if (target == 1) { // receiver_id
 							// To myself and only myself
-							incoming_packets.push_back(packet);
+							incoming_packets.push_back(packet); // payloads_
 						} else if (!server_relay) {
 							// No other destination is allowed when server is not relaying
 							continue;
@@ -574,6 +574,7 @@ Error NetworkedMultiplayerENet::put_packet(const uint8_t *p_buffer, int p_buffer
 
 		if (target_peer == 0) {
 			enet_host_broadcast(host, channel, packet);
+		// 自分以外の全員にbroadcast?
 		} else if (target_peer < 0) {
 			// Send to all but one
 			// and make copies for sending
